@@ -188,6 +188,41 @@ tr:hover td{background:var(--cream);}
 
 @media print{.filter-bar,.section-tabs{display:none!important;} .section{padding:12px;} header{padding:12px 16px;}}
 
+/* LABOR TAB */
+.labor-divider{display:flex;align-items:center;gap:16px;margin:36px 0 22px;}
+.labor-divider::before,.labor-divider::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,transparent,var(--cream-darker),transparent);}
+.labor-divider span{font-family:'Abril Fatface',serif;font-size:1.2rem;color:var(--navy);background:var(--gold-pale);padding:4px 18px;border-radius:20px;border:1.5px solid var(--gold);letter-spacing:.02em;}
+.labor-status{background:#fff4e5;border:1.5px solid var(--coral);border-radius:10px;padding:14px 18px;margin-bottom:18px;color:var(--dark);font-size:.88rem;}
+.labor-status.error{background:#fde8e8;border-color:var(--red);color:var(--red);}
+.labor-status .retry{margin-left:12px;padding:4px 12px;border:1.5px solid currentColor;border-radius:14px;background:transparent;color:inherit;font-weight:700;font-size:.78rem;cursor:pointer;}
+/* Labor % color-coding cells */
+.pct-cell{font-weight:700;text-align:right;}
+.pct-green{background:#e7f5e7;color:#1b5e20;}
+.pct-yellow{background:#fff8d6;color:#9a6b00;}
+.pct-coral{background:#fde3d1;color:#a24a10;}
+.pct-red{background:#fde8e8;color:var(--red);}
+
+/* Signals strip — a row of status pills summarizing labor health */
+.labor-signals{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px;}
+.signal{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:26px;font-size:.88rem;font-weight:600;background:white;box-shadow:var(--shadow);border:1.5px solid transparent;transition:transform .15s;}
+.signal:hover{transform:translateY(-1px);}
+.signal .icon{font-size:1.15rem;line-height:1;}
+.signal .label{color:var(--dark);}
+.signal .trend{font-size:.76rem;color:var(--mid);font-weight:500;margin-left:4px;border-left:1px solid var(--border);padding-left:10px;}
+.signal.good {background:#e7f5e7;border-color:#2e7d32;}
+.signal.good  .label{color:#1b5e20;}
+.signal.warn {background:#fff8d6;border-color:var(--gold);}
+.signal.warn  .label{color:#7a5200;}
+.signal.alert{background:#fde3d1;border-color:var(--coral);}
+.signal.alert .label{color:#a24a10;}
+.signal.bad  {background:#fde8e8;border-color:var(--red);}
+.signal.bad   .label{color:var(--red);}
+.signal.muted{background:var(--cream-dark);border-color:var(--border);}
+.signal.muted .label{color:var(--mid);}
+
+/* KPI card sparklines */
+.kpi-spark{display:block;margin-top:10px;height:28px;width:100%;opacity:.92;}
+
 /* LOADING / ERROR OVERLAY */
 #load-overlay{position:fixed;inset:0;background:var(--cream);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px;padding:30px;text-align:center;transition:opacity .25s;}
 #load-overlay.hide{opacity:0;pointer-events:none;}
@@ -224,7 +259,8 @@ tr:hover td{background:var(--cream);}
 
 <!-- TABS -->
 <div class="section-tabs">
-  <button class="active" onclick="switchTab('ops',this)">📊 Operations</button>
+  <button class="active" onclick="switchTab('ops',this)">📊 Performance</button>
+  <button onclick="switchTab('labor',this)">⏱ Labor</button>
   <button onclick="switchTab('fb',this)" style="display:none">🍕 F&B Labor</button>
   <button onclick="switchTab('opslabor',this)" style="display:none">👷 Ops Labor</button>
 </div>
@@ -542,6 +578,75 @@ tr:hover td{background:var(--cream);}
 
 </div><!-- end ops labor -->
 
+<!-- ═══════════════ LABOR TAB ═══════════════ -->
+<div class="section" id="section-labor">
+
+  <!-- SIGNALS STRIP — derived alerts across both labor sources -->
+  <div class="sec-head">Signals</div>
+  <div class="labor-signals" id="labor-signals">
+    <div class="signal muted"><span class="icon">…</span>Calculating signals…</div>
+  </div>
+
+  <!-- OPS LABOR BLOCK -->
+  <div class="sec-head">Ops Labor — Spring 2026</div>
+  <div class="labor-status" id="opslabor-status" style="display:none;"></div>
+  <div id="opslabor-body">
+    <div class="kpi-row" id="opslabor-kpis"></div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Cost by Department — per period</div>
+        <div class="chart-sub">Stacked by department across 9 periods (Oct '25 → Mar '26)</div>
+        <div class="chart-container"><canvas id="opsLaborCostChart" height="240"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Hours by Department — per period</div>
+        <div class="chart-sub">Grouped comparison of labor hours across departments</div>
+        <div class="chart-container"><canvas id="opsLaborHoursChart" height="240"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-head" style="margin-top:22px;">Department YTD Summary</div>
+    <div class="table-wrap"><table id="opslabor-table"></table></div>
+  </div>
+
+  <!-- VISUAL DIVIDER between Ops and F&B -->
+  <div class="labor-divider"><span>F&amp;B Labor</span></div>
+
+  <!-- F&B LABOR BLOCK -->
+  <div class="sec-head">F&amp;B Labor — Week by Week</div>
+  <div class="labor-status" id="fblabor-status" style="display:none;"></div>
+  <div id="fblabor-body">
+    <div class="kpi-row" id="fblabor-kpis"></div>
+
+    <div class="sec-head" style="margin-top:22px;">Labor % Trend</div>
+    <div class="chart-card" style="padding:20px;">
+      <div class="chart-title">Labor % by Week</div>
+      <div class="chart-sub">
+        Dashed lines mark benchmarks —
+        <span style="color:var(--green);font-weight:700">■</span> 20% (excellent) &nbsp;
+        <span style="color:var(--gold);font-weight:700">■</span> 25% (good)
+      </div>
+      <div class="chart-container" style="height:340px;"><canvas id="fbLaborPctChart"></canvas></div>
+    </div>
+
+    <div class="charts-row" style="margin-top:22px;">
+      <div class="chart-card">
+        <div class="chart-title">Scheduled vs Actual Hours</div>
+        <div class="chart-sub">Planned vs realized hours per week</div>
+        <div class="chart-container"><canvas id="fbHoursChart" height="240"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Weekly Labor $ Spend</div>
+        <div class="chart-sub">Total dollars spent on F&amp;B labor per week</div>
+        <div class="chart-container"><canvas id="fbDollarsChart" height="240"></canvas></div>
+      </div>
+    </div>
+
+    <div class="sec-head" style="margin-top:22px;">Week Detail</div>
+    <div class="table-wrap"><table id="fblabor-table"></table></div>
+  </div>
+
+</div><!-- end labor -->
+
 <script>
 // ══════════════════════════════════════════════
 //  DATA
@@ -650,7 +755,7 @@ let charts = {};
 // ══════════════════════════════════════════════
 //  TAB SWITCHING
 // ══════════════════════════════════════════════
-const tabsInited = {ops:false,fb:false,opslabor:false};
+const tabsInited = {ops:false,fb:false,opslabor:false,labor:false};
 
 function switchTab(tab, btn) {
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -663,6 +768,7 @@ function switchTab(tab, btn) {
     tabsInited[tab] = true;
     if (tab==='fb') { renderFBCharts(); renderWoWTable(); }
     if (tab==='opslabor') renderOpsCharts();
+    if (tab==='labor') loadLaborTab();
   }
 }
 
@@ -1194,6 +1300,602 @@ async function bootstrap() {
 }
 
 window.addEventListener('load', bootstrap);
+
+// ══════════════════════════════════════════════════════════════════
+//  LABOR TAB — Ops Labor + F&B Labor
+//  Two independent CSVs, parallel fetch, per-section error isolation.
+//  Update the URLs here if the sheets move.
+// ══════════════════════════════════════════════════════════════════
+const OPS_LABOR_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjkxTnOkL-7_gcyIu9V2DUl556mw_eNrEKrhV6DlCA0zY4FYzgapreScQBWwoshQ/pub?gid=550958583&single=true&output=csv';
+const FB_LABOR_CSV  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7ArS-v44-uGcyAOQ1uSg9UlcpmqNAZyV55aV0EJcGtYmxhHibE9pF5oTnr6yERRTxx7ii8MCb4VXG/pub?gid=954457807&single=true&output=csv';
+
+// Stable department order + palette — matches the dashboard's CSS variables.
+const DEPT_ORDER  = ['Attractions & Parking','Food & Beverage','Admissions & Retail','Custodial & Maint.','Farm'];
+const DEPT_COLORS = {
+  'Attractions & Parking': '#00274c',  // navy
+  'Food & Beverage':       '#febc1a',  // gold
+  'Admissions & Retail':   '#63b0b8',  // teal
+  'Custodial & Maint.':    '#e07b39',  // coral
+  'Farm':                  '#2e7d32',  // green
+};
+
+// Parse "29.74%" or "-7.05%" → 0.2974 / -0.0705. "-" / "-%" / blank → null.
+function parsePct(s) {
+  if (s == null) return null;
+  const cleaned = String(s).replace('%','').trim();
+  if (!cleaned || cleaned === '-') return null;
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n / 100;
+}
+// Lenient number parse — commas stripped, blank/dash → null.
+function parseNum(s) {
+  if (s == null) return null;
+  const cleaned = String(s).replace(/,/g,'').trim();
+  if (!cleaned || cleaned === '-') return null;
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? null : n;
+}
+
+// ──────────────── OPS LABOR ────────────────
+// The Ops sheet uses two-row pairs per department (Hours, then Cost ($)) with
+// blank separator rows. Rows 1-3 are title/instructions/blank. Row 4 is headers.
+async function loadOpsLabor() {
+  const res = await fetch(OPS_LABOR_CSV, {cache:'no-store'});
+  if (!res.ok) throw new Error('Ops Labor HTTP ' + res.status);
+  const text = await res.text();
+  // Use raw (no-header) parse — the sheet layout isn't a clean header-per-column table.
+  const parsed = Papa.parse(text, {header:false, skipEmptyLines:false});
+  const rows = parsed.data;
+  // Row 4 (index 3) is the header row: [Department, Metric, ...periods, YTD]
+  const headerRow = rows[3] || [];
+  const periods = headerRow.slice(2, -1);  // drop "Department", "Metric", and last "YTD Season"
+  const ytdLabel = headerRow[headerRow.length - 1];
+
+  const departments = [];
+  let current = null;
+  for (let i = 4; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every(c => !c || !String(c).trim())) continue;  // blank row
+    const name = String(r[0] || '').trim();
+    const metric = String(r[1] || '').trim();
+    if (name) {
+      // A new named row — either starts a dept we care about, or a
+      // summary/budget section we must skip. Either way, reset `current`
+      // so we don't accidentally attribute GRAND TOTAL rows to the last dept.
+      if (DEPT_ORDER.includes(name)) {
+        current = {name, hours:[], cost:[], ytdHours:0, ytdCost:0};
+        departments.push(current);
+      } else {
+        current = null;
+      }
+    }
+    if (!current) continue;
+    const values = r.slice(2);                       // includes period cols + YTD
+    const periodVals = values.slice(0, periods.length);
+    const ytdVal = values[values.length - 1];
+    if (metric === 'Hours') {
+      current.hours = periodVals.map(v => parseNum(v) || 0);
+      current.ytdHours = parseNum(ytdVal) || 0;
+    } else if (metric === 'Cost ($)') {
+      current.cost = periodVals.map(v => parseMoney(v));
+      current.ytdCost = parseMoney(ytdVal);
+    }
+  }
+  // Sort by DEPT_ORDER so colors stay stable regardless of sheet order.
+  departments.sort((a,b) => DEPT_ORDER.indexOf(a.name) - DEPT_ORDER.indexOf(b.name));
+
+  const ytdHours = departments.reduce((s,d) => s + d.ytdHours, 0);
+  const ytdCost  = departments.reduce((s,d) => s + d.ytdCost, 0);
+  return {periods, ytdLabel, departments, ytdHours, ytdCost};
+}
+
+// ──────────────── F&B LABOR ────────────────
+// The F&B sheet is a clean header-row CSV — one row per week.
+async function loadFBLabor() {
+  const res = await fetch(FB_LABOR_CSV, {cache:'no-store'});
+  if (!res.ok) throw new Error('F&B Labor HTTP ' + res.status);
+  const text = await res.text();
+  const parsed = Papa.parse(text, {header:true, skipEmptyLines:true});
+  const weeks = parsed.data
+    .map(r => ({
+      week:     String(r['Week'] || '').trim(),
+      date:     String(r['Date'] || '').trim(),
+      sched:    parseNum(r['Scheduled Hours']),
+      actual:   parseNum(r['Actual Hours']),
+      variance: parsePct(r['Variance']),
+      pct:      parsePct(r['LABOR %']),
+      dol:      parseMoney(r['LABOR $']),
+      att:      parseNum(r['Attendance']),
+      note:     String(r['NOTES'] || '').trim(),
+    }))
+    .filter(w => w.week && w.actual != null);  // skip placeholder future weeks
+  return {weeks};
+}
+
+// ──────────────── TAB ORCHESTRATION ────────────────
+// Fetch both in parallel, but render each independently so one failure
+// doesn't hide the other. Called once on first tab click (lazy init).
+async function loadLaborTab() {
+  renderOpsLaborLoading();
+  renderFBLaborLoading();
+  const [opsRes, fbRes] = await Promise.allSettled([loadOpsLabor(), loadFBLabor()]);
+  const opsVal = opsRes.status === 'fulfilled' ? opsRes.value : null;
+  const fbVal  = fbRes.status  === 'fulfilled' ? fbRes.value  : null;
+  if (opsVal) {
+    try { renderOpsLaborAll(opsVal); }
+    catch (e) { console.error(e); renderSectionError('opslabor', e); }
+  } else {
+    console.error(opsRes.reason);
+    renderSectionError('opslabor', opsRes.reason);
+  }
+  if (fbVal) {
+    try { renderFBLaborAll(fbVal); }
+    catch (e) { console.error(e); renderSectionError('fblabor', e); }
+  } else {
+    console.error(fbRes.reason);
+    renderSectionError('fblabor', fbRes.reason);
+  }
+  // Signals bar needs whatever loaded — it'll render with partial data.
+  renderLaborSignals(opsVal, fbVal);
+}
+
+// ──────────────── SPARKLINE HELPER ────────────────
+// Inline SVG sparkline — cheap, sharp, no Chart.js overhead per card.
+// Accepts an array of numbers (nulls allowed = gaps), returns an SVG string.
+function sparkline(values, color) {
+  if (!values || !values.length) return '';
+  const W = 140, H = 28, PAD = 2;
+  const cleaned = values.map(v => (v == null || isNaN(v)) ? null : Number(v));
+  const valid = cleaned.filter(v => v != null);
+  if (!valid.length) return '';
+  const min = Math.min(...valid), max = Math.max(...valid);
+  const range = max - min || 1;
+  const n = cleaned.length;
+  const x = i => PAD + i * (W - 2*PAD) / Math.max(n - 1, 1);
+  const y = v => H - PAD - ((v - min) / range) * (H - 2*PAD);
+  const pts = cleaned.map((v,i) => v == null ? null : `${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+  // Last valid point: draw a small dot so the "current" value is obvious.
+  let lastIdx = -1;
+  for (let i = cleaned.length - 1; i >= 0; i--) { if (cleaned[i] != null) { lastIdx = i; break; } }
+  const dot = lastIdx >= 0
+    ? `<circle cx="${x(lastIdx).toFixed(1)}" cy="${y(cleaned[lastIdx]).toFixed(1)}" r="2.5" fill="${color}"/>`
+    : '';
+  return `<svg class="kpi-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+    ${dot}
+  </svg>`;
+}
+
+// ──────────────── LABOR SIGNALS ────────────────
+// Derive a handful of owner-facing status pills from the loaded data.
+// Rules are deliberately simple so they're easy to tune later.
+function computeLaborSignals(ops, fb) {
+  const out = [];
+
+  // Signal: F&B Labor % 3-week trend vs prior 3 weeks.
+  if (fb) {
+    const withPct = fb.weeks.filter(w => w.pct != null);
+    if (withPct.length >= 6) {
+      const recent = withPct.slice(-3);
+      const prior  = withPct.slice(-6, -3);
+      const rAvg = recent.reduce((s,w)=>s+w.pct,0) / recent.length;
+      const pAvg = prior .reduce((s,w)=>s+w.pct,0) / prior.length;
+      const delta = rAvg - pAvg;
+      const kind = rAvg <= 0.20 ? 'good' : rAvg <= 0.25 ? 'warn' : rAvg <= 0.30 ? 'alert' : 'bad';
+      const arrow = delta <= -0.005 ? '▼' : delta >=  0.005 ? '▲' : '→';
+      const dir   = delta <= -0.005 ? 'improving' : delta >=  0.005 ? 'worsening' : 'flat';
+      out.push({
+        kind,
+        icon: '📊',
+        label: `F&B Labor % (3-wk avg): ${(rAvg*100).toFixed(1)}%`,
+        trend: `${arrow} ${dir} · prior 3-wk ${(pAvg*100).toFixed(1)}%`,
+      });
+    } else if (withPct.length >= 1) {
+      const last = withPct[withPct.length - 1];
+      const kind = last.pct <= 0.20 ? 'good' : last.pct <= 0.25 ? 'warn' : last.pct <= 0.30 ? 'alert' : 'bad';
+      out.push({
+        kind, icon: '📊',
+        label: `Latest F&B Labor %: ${(last.pct*100).toFixed(1)}% (Wk ${last.week})`,
+      });
+    }
+  }
+
+  // Signal: Ops labor concentration — which dept owns the biggest share?
+  if (ops && ops.ytdCost > 0) {
+    const top = [...ops.departments].sort((a,b) => b.ytdCost - a.ytdCost)[0];
+    const share = top.ytdCost / ops.ytdCost;
+    out.push({
+      kind: share >= 0.50 ? 'alert' : share >= 0.35 ? 'warn' : 'good',
+      icon: '💰',
+      label: `${top.name} = ${(share*100).toFixed(0)}% of labor spend`,
+      trend: `${fmt$(top.ytdCost)} of ${fmt$(ops.ytdCost)} YTD`,
+    });
+  }
+
+  // Signal: F&B schedule adherence over last 5 weeks.
+  if (fb) {
+    const recent = fb.weeks.filter(w => w.variance != null).slice(-5);
+    if (recent.length >= 3) {
+      const avg = recent.reduce((s,w)=>s+w.variance, 0) / recent.length;
+      if (Math.abs(avg) >= 0.05) {
+        const over = avg > 0;
+        out.push({
+          kind: over ? 'warn' : 'good',
+          icon: over ? '⬆' : '⬇',
+          label: `F&B hours ${over ? 'over' : 'under'} schedule by ${Math.abs(avg*100).toFixed(1)}%`,
+          trend: `Avg of last ${recent.length} weeks`,
+        });
+      } else {
+        out.push({
+          kind: 'good', icon: '🎯',
+          label: `F&B scheduling on-target (±${Math.abs(avg*100).toFixed(1)}%)`,
+          trend: `Last ${recent.length} weeks`,
+        });
+      }
+    }
+  }
+
+  // Signal: F&B season YTD labor $
+  if (fb) {
+    const ytdDol = fb.weeks.reduce((s,w)=>s+(w.dol||0), 0);
+    if (ytdDol > 0) {
+      out.push({
+        kind: 'muted', icon: '🍔',
+        label: `F&B YTD: ${fmt$(ytdDol)}`,
+        trend: `${fb.weeks.length} weeks logged`,
+      });
+    }
+  }
+
+  return out;
+}
+
+function renderLaborSignals(ops, fb) {
+  const el = document.getElementById('labor-signals');
+  const signals = computeLaborSignals(ops, fb);
+  if (!signals.length) {
+    el.innerHTML = `<div class="signal muted"><span class="icon">…</span><span class="label">No signals yet — data still loading or unavailable.</span></div>`;
+    return;
+  }
+  el.innerHTML = signals.map(s => `
+    <div class="signal ${s.kind}" title="${s.trend ? s.trend.replace(/"/g,'&quot;') : ''}">
+      <span class="icon">${s.icon}</span>
+      <span class="label">${s.label}</span>
+      ${s.trend ? `<span class="trend">${s.trend}</span>` : ''}
+    </div>`).join('');
+}
+
+function renderOpsLaborLoading() {
+  const s = document.getElementById('opslabor-status');
+  s.style.display = 'block';
+  s.classList.remove('error');
+  s.textContent = 'Loading Ops Labor…';
+}
+function renderFBLaborLoading() {
+  const s = document.getElementById('fblabor-status');
+  s.style.display = 'block';
+  s.classList.remove('error');
+  s.textContent = 'Loading F&B Labor…';
+}
+// Called on failure for one half — leaves the other section untouched.
+function renderSectionError(section, err) {
+  const s = document.getElementById(section + '-status');
+  s.style.display = 'block';
+  s.classList.add('error');
+  const msg = (err && err.message) ? String(err.message).replace(/</g,'&lt;') : 'Unknown error';
+  s.innerHTML = `<strong>Couldn\u2019t load data:</strong> ${msg}
+    &nbsp;·&nbsp; Last attempt: ${new Date().toLocaleString()}
+    <button class="retry" onclick="tabsInited.labor=false;loadLaborTab()">Retry</button>`;
+  document.getElementById(section + '-body').style.opacity = '0.35';
+}
+function clearStatus(section) {
+  const s = document.getElementById(section + '-status');
+  s.style.display = 'none';
+  document.getElementById(section + '-body').style.opacity = '1';
+}
+
+// ──────────────── OPS LABOR RENDER ────────────────
+function renderOpsLaborAll(ops) {
+  clearStatus('opslabor');
+  renderOpsLaborKPIs(ops);
+  renderOpsLaborCostChart(ops);
+  renderOpsLaborHoursChart(ops);
+  renderOpsLaborTable(ops);
+}
+
+function renderOpsLaborKPIs(ops) {
+  const topCostDept  = [...ops.departments].sort((a,b) => b.ytdCost  - a.ytdCost )[0];
+  const topHoursDept = [...ops.departments].sort((a,b) => b.ytdHours - a.ytdHours)[0];
+  const avgPerHr = ops.ytdHours > 0 ? ops.ytdCost / ops.ytdHours : 0;
+  // Per-period sparkline source data — sum across depts per period.
+  const costPerPeriod  = ops.periods.map((_,i) => ops.departments.reduce((s,d) => s + (d.cost [i] || 0), 0));
+  const hoursPerPeriod = ops.periods.map((_,i) => ops.departments.reduce((s,d) => s + (d.hours[i] || 0), 0));
+  const perHrPerPeriod = ops.periods.map((_,i) => hoursPerPeriod[i] > 0 ? costPerPeriod[i] / hoursPerPeriod[i] : null);
+  const cards = [
+    {label:'YTD Labor Spend',    value:fmt$(ops.ytdCost),         sub:'All departments combined',
+     color:'navy',  spark: sparkline(costPerPeriod,  '#00274c')},
+    {label:'YTD Labor Hours',    value:fmtN(Math.round(ops.ytdHours)), sub:'Season total',
+     color:'teal',  spark: sparkline(hoursPerPeriod, '#63b0b8')},
+    {label:'Highest-Cost Dept',  value:fmt$(topCostDept.ytdCost), sub:topCostDept.name,
+     color:'coral', spark: sparkline(topCostDept.cost,  '#e07b39')},
+    {label:'Highest-Hours Dept', value:fmtN(Math.round(topHoursDept.ytdHours))+'h', sub:topHoursDept.name,
+     color:'gold',  spark: sparkline(topHoursDept.hours, '#febc1a')},
+    {label:'Avg $ / Hour',       value:'$'+avgPerHr.toFixed(2),   sub:'Blended rate across all depts',
+     color:'green', spark: sparkline(perHrPerPeriod, '#2e7d32')},
+  ];
+  document.getElementById('opslabor-kpis').innerHTML = cards.map(c => `
+    <div class="kpi-card ${c.color}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+      ${c.spark || ''}
+    </div>`).join('');
+}
+
+function renderOpsLaborCostChart(ops) {
+  const datasets = ops.departments.map(d => ({
+    label: d.name,
+    data: d.cost,
+    backgroundColor: DEPT_COLORS[d.name],
+    borderWidth: 0,
+  }));
+  makeChart('opsLaborCostChart', {
+    type:'bar',
+    data:{labels: ops.periods, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:11}, boxWidth:12}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': $'+ctx.raw.toLocaleString()}}
+      },
+      scales:{
+        x:{stacked:true, ticks:{font:{size:10}}},
+        y:{stacked:true, ticks:{callback:v=>'$'+(v>=1000?(v/1000).toFixed(0)+'k':v)}}
+      }
+    }
+  });
+}
+
+function renderOpsLaborHoursChart(ops) {
+  const datasets = ops.departments.map(d => ({
+    label: d.name,
+    data: d.hours,
+    backgroundColor: DEPT_COLORS[d.name],
+    borderWidth: 0,
+  }));
+  makeChart('opsLaborHoursChart', {
+    type:'bar',
+    data:{labels: ops.periods, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:11}, boxWidth:12}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.raw.toFixed(1)+' hrs'}}
+      },
+      scales:{
+        x:{ticks:{font:{size:10}}},
+        y:{beginAtZero:true, ticks:{callback:v=>v+'h'}}
+      }
+    }
+  });
+}
+
+function renderOpsLaborTable(ops) {
+  let html = `<thead><tr>
+    <th>Department</th><th>YTD Hours</th><th>YTD Cost</th><th>Avg $/hr</th>
+  </tr></thead><tbody>`;
+  ops.departments.forEach(d => {
+    const perHr = d.ytdHours > 0 ? d.ytdCost / d.ytdHours : 0;
+    html += `<tr>
+      <td style="font-weight:700;color:var(--navy)">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${DEPT_COLORS[d.name]};margin-right:8px;vertical-align:middle;"></span>${d.name}
+      </td>
+      <td class="tbl-num">${d.ytdHours.toFixed(1)}</td>
+      <td class="tbl-num">${fmt$(d.ytdCost)}</td>
+      <td class="tbl-num">$${perHr.toFixed(2)}</td>
+    </tr>`;
+  });
+  html += `<tr style="background:var(--navy);color:white;font-weight:700;">
+    <td>SEASON TOTAL</td>
+    <td class="tbl-num">${ops.ytdHours.toFixed(1)}</td>
+    <td class="tbl-num" style="color:var(--gold)">${fmt$(ops.ytdCost)}</td>
+    <td class="tbl-num" style="color:var(--gold)">$${(ops.ytdCost / ops.ytdHours).toFixed(2)}</td>
+  </tr></tbody>`;
+  document.getElementById('opslabor-table').innerHTML = html;
+}
+
+// ──────────────── F&B LABOR RENDER ────────────────
+function renderFBLaborAll(fb) {
+  clearStatus('fblabor');
+  renderFBLaborKPIs(fb);
+  renderFBLaborPctChart(fb);
+  renderFBLaborHoursChart(fb);
+  renderFBLaborDollarsChart(fb);
+  renderFBLaborTable(fb);
+}
+
+function renderFBLaborKPIs(fb) {
+  const ytdDollars = fb.weeks.reduce((s,w) => s + (w.dol || 0), 0);
+  const ytdHours   = fb.weeks.reduce((s,w) => s + (w.actual || 0), 0);
+  // Best/worst labor % — only among weeks that have a non-null %
+  const withPct = fb.weeks.filter(w => w.pct != null);
+  const best  = withPct.length ? withPct.reduce((m,w) => w.pct < m.pct ? w : m) : null;
+  const worst = withPct.length ? withPct.reduce((m,w) => w.pct > m.pct ? w : m) : null;
+  // Last-3 average: chronological last 3 rows with a labor %
+  const last3 = withPct.slice(-3);
+  const last3Avg = last3.length ? last3.reduce((s,w) => s + w.pct, 0) / last3.length : null;
+
+  // Per-week sparkline sources (nulls preserved so gaps render correctly).
+  const dolByWeek   = fb.weeks.map(w => w.dol || null);
+  const hoursByWeek = fb.weeks.map(w => w.actual);
+  const pctByWeek   = fb.weeks.map(w => w.pct != null ? w.pct * 100 : null);
+  const cards = [
+    {label:'YTD Labor $',        value:fmt$(ytdDollars),             sub:'Sum of all complete weeks',
+     color:'navy',  spark: sparkline(dolByWeek,   '#00274c')},
+    {label:'YTD Actual Hours',   value:fmtN(Math.round(ytdHours))+'h', sub:'Total F&B hours worked',
+     color:'teal',  spark: sparkline(hoursByWeek, '#63b0b8')},
+    {label:'Best Labor %',       value:best ? (best.pct*100).toFixed(2)+'%' : '—',
+      sub: best ? 'Week '+best.week+' · '+best.date : '',
+      color:'green'},
+    {label:'Worst Labor %',      value:worst ? (worst.pct*100).toFixed(2)+'%' : '—',
+      sub: worst ? 'Week '+worst.week+' · '+worst.date : '',
+      color:'coral'},
+    {label:'Last 3-Week Avg',    value:last3Avg != null ? (last3Avg*100).toFixed(2)+'%' : '—',
+     sub:'Current labor % trend',
+     color:'gold',  spark: sparkline(pctByWeek,  '#febc1a')},
+  ];
+  document.getElementById('fblabor-kpis').innerHTML = cards.map(c => `
+    <div class="kpi-card ${c.color}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+      ${c.spark || ''}
+    </div>`).join('');
+}
+
+function renderFBLaborPctChart(fb) {
+  // Show every week on the X-axis so gaps (like Week 4's no-revenue event) are visible.
+  const labels = fb.weeks.map(w => 'Wk '+w.week);
+  const pctData = fb.weeks.map(w => w.pct != null ? +(w.pct*100).toFixed(2) : null);
+  const n = labels.length;
+  makeChart('fbLaborPctChart', {
+    type:'line',
+    data:{
+      labels,
+      datasets: [
+        {
+          label: 'Labor %',
+          data: pctData,
+          borderColor: '#00274c',
+          backgroundColor: 'rgba(0,39,76,.08)',
+          borderWidth: 3,
+          pointRadius: 5,
+          pointBackgroundColor: '#febc1a',
+          pointBorderColor: '#00274c',
+          tension: 0.25,
+          spanGaps: true,
+          fill: true,
+        },
+        // Reference line: 25% (good)
+        {
+          label: '25% target',
+          data: Array(n).fill(25),
+          borderColor: '#febc1a',
+          borderDash: [6,4],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+        },
+        // Reference line: 20% (excellent)
+        {
+          label: '20% target',
+          data: Array(n).fill(20),
+          borderColor: '#2e7d32',
+          borderDash: [6,4],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:11}, boxWidth:18}},
+        tooltip:{callbacks:{label: ctx => ctx.dataset.label + ': ' + (ctx.raw == null ? '—' : ctx.raw.toFixed(2)+'%')}}
+      },
+      scales:{
+        y:{beginAtZero:true, ticks:{callback:v=>v+'%'}, suggestedMax: 40},
+      }
+    }
+  });
+}
+
+function renderFBLaborHoursChart(fb) {
+  const labels = fb.weeks.map(w => 'Wk '+w.week);
+  makeChart('fbHoursChart', {
+    type:'bar',
+    data:{
+      labels,
+      datasets: [
+        {label:'Scheduled', data: fb.weeks.map(w => w.sched || 0),  backgroundColor:'#63b0b8'},
+        {label:'Actual',    data: fb.weeks.map(w => w.actual || 0), backgroundColor:'#00274c'},
+      ],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:11}, boxWidth:12}},
+        tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.raw.toFixed(1)+' hrs'}}
+      },
+      scales:{
+        y:{beginAtZero:true, ticks:{callback:v=>v+'h'}},
+      }
+    }
+  });
+}
+
+function renderFBLaborDollarsChart(fb) {
+  const labels = fb.weeks.map(w => 'Wk '+w.week);
+  makeChart('fbDollarsChart', {
+    type:'bar',
+    data:{
+      labels,
+      datasets: [{
+        label:'Labor $',
+        data: fb.weeks.map(w => w.dol || 0),
+        backgroundColor: '#e07b39',
+      }],
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>' $'+ctx.raw.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2})}}
+      },
+      scales:{
+        y:{beginAtZero:true, ticks:{callback:v=>'$'+(v>=1000?(v/1000).toFixed(1)+'k':v)}}
+      }
+    }
+  });
+}
+
+// Color-code the Labor % cell per user-specified bands.
+function pctBand(p) {
+  if (p == null) return '';
+  const v = p * 100;
+  if (v <= 20) return 'pct-green';
+  if (v <= 25) return 'pct-yellow';
+  if (v <= 30) return 'pct-coral';
+  return 'pct-red';
+}
+function fmtVar(v) {
+  if (v == null) return '—';
+  const pct = (v*100).toFixed(2)+'%';
+  return (v >= 0 ? '+' : '') + pct;
+}
+function renderFBLaborTable(fb) {
+  let html = `<thead><tr>
+    <th>Week</th><th>Date</th><th>Sched Hrs</th><th>Actual Hrs</th>
+    <th>Variance</th><th>Labor %</th><th>Labor $</th><th>Attendance</th><th>Notes</th>
+  </tr></thead><tbody>`;
+  fb.weeks.forEach(w => {
+    const band = pctBand(w.pct);
+    html += `<tr>
+      <td style="font-weight:700;color:var(--navy)">${w.week}</td>
+      <td>${w.date}</td>
+      <td class="tbl-num">${w.sched != null ? w.sched.toFixed(2) : '—'}</td>
+      <td class="tbl-num">${w.actual != null ? w.actual.toFixed(2) : '—'}</td>
+      <td class="tbl-num">${fmtVar(w.variance)}</td>
+      <td class="tbl-num pct-cell ${band}">${w.pct != null ? (w.pct*100).toFixed(2)+'%' : '—'}</td>
+      <td class="tbl-num">${w.dol ? fmt$(w.dol) : '—'}</td>
+      <td class="tbl-num">${w.att != null ? fmtN(w.att) : '—'}</td>
+      <td style="font-size:.82rem;color:var(--mid)">${w.note}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('fblabor-table').innerHTML = html;
+}
 </script>
 </body>
 </html>
