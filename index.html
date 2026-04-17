@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananda Farm — Master Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#00274c; --navy-mid:#003b6e; --navy-light:#1a5a8a;
+  --gold:#febc1a; --gold-light:#ffd45e; --gold-pale:#fff8d6;
+  --cream:#fff8ec; --cream-dark:#f5edda; --cream-darker:#ede0c4;
+  --teal:#63b0b8; --teal-light:#8fcdd4; --teal-dark:#3d8a93;
+  --dark:#222; --mid:#555; --light:#888;
+  --white:#fff; --border:#e0d4bc;
+  --shadow:0 2px 12px rgba(0,39,76,.10);
+  --shadow-lg:0 4px 24px rgba(0,39,76,.18);
+  --red:#c62828; --green:#2e7d32;
+  --coral:#e07b39; --purple:#6c5ce7;
+}
+body{font-family:'Inter',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;}
+
+/* HEADER */
+header{
+  background:var(--navy);color:white;
+  padding:20px 36px;
+  display:flex;justify-content:space-between;align-items:center;
+  box-shadow:0 3px 16px rgba(0,0,0,.28);
+}
+.header-left h1{font-family:'Abril Fatface',serif;font-size:2rem;letter-spacing:.02em;color:var(--gold);}
+.header-left .tagline{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;opacity:.6;margin-top:3px;}
+.header-right{text-align:right;}
+.season-badge{background:var(--gold);color:var(--navy);padding:4px 14px;border-radius:20px;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;display:inline-block;margin-bottom:5px;}
+.header-meta{font-size:.78rem;opacity:.7;}
+
+/* TABS */
+.section-tabs{background:var(--navy-mid);display:flex;border-bottom:3px solid var(--gold);}
+.section-tabs button{
+  padding:13px 32px;border:none;background:transparent;
+  color:rgba(255,255,255,.55);
+  font-family:'Inter',sans-serif;font-size:.88rem;font-weight:700;letter-spacing:.04em;
+  cursor:pointer;transition:all .2s;border-bottom:3px solid transparent;margin-bottom:-3px;
+}
+.section-tabs button.active{color:var(--gold);border-bottom-color:var(--gold);}
+.section-tabs button:hover{color:white;}
+
+/* FILTER BAR */
+.filter-bar{
+  background:white;border-bottom:1px solid var(--border);
+  padding:10px 36px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+.filter-label{font-size:.73rem;color:var(--light);font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+.filter-btn{padding:5px 14px;border:1.5px solid var(--navy);border-radius:20px;background:white;color:var(--navy);font-family:'Inter',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s;}
+.filter-btn:hover,.filter-btn.active{background:var(--navy);color:white;}
+.filter-sep{color:var(--border);font-size:1.1rem;}
+.view-btn{padding:5px 14px;border:1.5px solid var(--border);border-radius:20px;background:white;color:var(--mid);font-family:'Inter',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s;}
+.view-btn.active{background:var(--gold);color:var(--navy);border-color:var(--gold);}
+
+/* SECTION */
+.section{padding:28px 36px;max-width:1700px;margin:0 auto;display:none;}
+.section.active{display:block;}
+
+/* SEC HEAD */
+.sec-head{font-family:'Abril Fatface',serif;font-size:1rem;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.sec-head::after{content:'';flex:1;height:2px;background:var(--cream-darker);}
+
+/* KPI CARDS */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:26px;}
+@media(max-width:1300px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+.kpi-card{background:white;border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);border-top:4px solid var(--teal);position:relative;overflow:hidden;}
+.kpi-card.gold{border-top-color:var(--gold);}
+.kpi-card.navy{border-top-color:var(--navy);}
+.kpi-card.teal{border-top-color:var(--teal);}
+.kpi-card.coral{border-top-color:var(--coral);}
+.kpi-card.green{border-top-color:var(--green);}
+.kpi-card.red{border-top-color:var(--red);}
+.kpi-label{font-size:.67rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--light);margin-bottom:7px;}
+.kpi-value{font-family:'Abril Fatface',serif;font-size:2rem;color:var(--navy);line-height:1;margin-bottom:4px;}
+.kpi-sub{font-size:.74rem;color:var(--mid);}
+.kpi-change{display:inline-flex;align-items:center;gap:3px;font-size:.72rem;font-weight:700;margin-top:6px;padding:2px 8px;border-radius:10px;}
+.kpi-change.up{background:#e8f5e9;color:var(--green);}
+.kpi-change.down{background:#fce4ec;color:var(--red);}
+.kpi-change.flat{background:#f5f5f5;color:#666;}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:24px;}
+.charts-row-equal{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px;}
+.charts-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:24px;}
+@media(max-width:1000px){.charts-row,.charts-row-equal,.charts-row-3{grid-template-columns:1fr;}}
+.chart-card{background:white;border-radius:14px;padding:22px;box-shadow:var(--shadow);}
+.chart-title{font-size:.92rem;font-weight:800;color:var(--navy);margin-bottom:3px;}
+.chart-sub{font-size:.74rem;color:var(--light);margin-bottom:16px;}
+.chart-container{position:relative;}
+
+/* RECENT STRIP */
+.recent-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:24px;}
+.recent-day{background:white;border-radius:12px;padding:14px 16px;min-width:130px;box-shadow:var(--shadow);border-top:3px solid var(--teal);flex-shrink:0;}
+.recent-day.best{border-top-color:var(--gold);}
+.recent-day .rd-date{font-size:.66rem;color:var(--light);font-weight:700;text-transform:uppercase;margin-bottom:4px;}
+.recent-day .rd-rev{font-family:'Abril Fatface',serif;font-size:1.1rem;color:var(--navy);}
+.recent-day .rd-att{font-size:.72rem;color:var(--mid);margin-top:3px;}
+.recent-day .rd-cap{font-size:.72rem;color:var(--teal);font-weight:700;}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;margin-bottom:24px;}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+th{background:var(--navy);color:white;padding:10px 12px;text-align:left;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;}
+td{padding:9px 12px;border-bottom:1px solid var(--cream-darker);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--cream);}
+.tbl-num{font-weight:700;color:var(--navy);}
+.tbl-pos{color:var(--green);font-weight:700;}
+.tbl-neg{color:var(--red);font-weight:700;}
+.tbl-note{font-size:.74rem;color:var(--mid);font-style:italic;}
+
+/* HERO BANNER */
+.hero-banner{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);
+  border-radius:16px;padding:24px 32px;box-shadow:var(--shadow-lg);
+  color:white;margin-bottom:26px;
+  display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+}
+.hero-banner h2{font-family:'Abril Fatface',serif;font-size:1.4rem;color:var(--gold);margin-bottom:4px;}
+.hero-banner p{font-size:.84rem;opacity:.75;}
+.hero-stats{display:flex;gap:32px;flex-wrap:wrap;}
+.hero-stat{text-align:center;}
+.hero-stat .val{font-family:'Abril Fatface',serif;font-size:2rem;color:var(--gold);line-height:1;}
+.hero-stat .lbl{font-size:.68rem;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
+
+/* MONTHLY COMPARISON TABLE */
+.monthly-card{background:white;border-radius:14px;padding:22px;box-shadow:var(--shadow);margin-bottom:24px;overflow-x:auto;}
+.monthly-card table th{font-size:.68rem;padding:8px 10px;}
+.monthly-card table td{padding:8px 10px;font-size:.81rem;}
+.month-head{background:var(--cream-dark)!important;color:var(--navy)!important;font-weight:700;}
+
+/* DEPT CARDS (Ops Labor) */
+.dept-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+@media(max-width:1300px){.dept-row{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:700px){.dept-row{grid-template-columns:repeat(2,1fr);}}
+.dept-card{background:white;border-radius:14px;padding:20px;box-shadow:var(--shadow);border-left:5px solid var(--teal);position:relative;}
+.dept-card.gold{border-left-color:var(--gold);}
+.dept-card.navy{border-left-color:var(--navy);}
+.dept-card.coral{border-left-color:var(--coral);}
+.dept-card.teal{border-left-color:var(--teal);}
+.dept-card.green{border-left-color:var(--green);}
+.dept-name{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--light);margin-bottom:8px;}
+.dept-hrs{font-family:'Abril Fatface',serif;font-size:1.8rem;color:var(--navy);line-height:1;}
+.dept-cost{font-size:.9rem;font-weight:700;color:var(--mid);margin-top:4px;}
+.dept-count{font-size:.74rem;color:var(--light);margin-top:6px;}
+
+/* STAFF TABLE */
+.staff-section{background:white;border-radius:14px;padding:22px;box-shadow:var(--shadow);margin-bottom:24px;}
+.staff-dept-header{background:var(--navy);color:white;padding:8px 12px;font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+.staff-row td{padding:8px 12px;font-size:.8rem;}
+.rate-chip{display:inline-block;background:var(--cream-dark);border-radius:6px;padding:2px 8px;font-size:.72rem;font-weight:700;color:var(--navy);}
+
+/* SUMMARY BAND */
+.summary-band{
+  background:var(--navy);color:white;border-radius:12px;padding:18px 28px;
+  display:flex;gap:40px;align-items:center;flex-wrap:wrap;margin-bottom:24px;
+  box-shadow:var(--shadow-lg);
+}
+.sum-item{text-align:center;}
+.sum-val{font-family:'Abril Fatface',serif;font-size:1.6rem;color:var(--gold);}
+.sum-lbl{font-size:.68rem;opacity:.65;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+
+/* INLINE BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:.7rem;font-weight:800;letter-spacing:.03em;}
+.badge-green{background:#e8f5e9;color:var(--green);}
+.badge-red{background:#fce4ec;color:var(--red);}
+.badge-gold{background:var(--gold-pale);color:#7a5a00;}
+.badge-mid{background:#f5f5f5;color:#555;}
+
+/* INSIGHT ROW */
+.insight-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+@media(max-width:900px){.insight-row{grid-template-columns:repeat(2,1fr);}}
+.insight-card{background:white;border-radius:14px;padding:20px;box-shadow:var(--shadow);text-align:center;}
+.insight-icon{font-size:1.8rem;margin-bottom:8px;}
+.insight-val{font-family:'Abril Fatface',serif;font-size:1.6rem;color:var(--navy);}
+.insight-lbl{font-size:.72rem;color:var(--light);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;font-weight:700;}
+.insight-sub{font-size:.74rem;color:var(--mid);margin-top:4px;}
+
+@media print{.filter-bar,.section-tabs{display:none!important;} .section{padding:12px;} header{padding:12px 16px;}}
+
+/* LOADING / ERROR OVERLAY */
+#load-overlay{position:fixed;inset:0;background:var(--cream);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px;padding:30px;text-align:center;transition:opacity .25s;}
+#load-overlay.hide{opacity:0;pointer-events:none;}
+#load-overlay .spinner{width:42px;height:42px;border:4px solid var(--cream-darker);border-top-color:var(--navy);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#load-overlay .msg{font-family:'Abril Fatface',serif;font-size:1.4rem;color:var(--navy);}
+#load-overlay .sub{font-size:.9rem;color:var(--mid);max-width:480px;}
+#load-overlay.error .spinner{display:none;}
+#load-overlay.error .msg{color:var(--red);}
+#load-overlay button{padding:8px 20px;border:1.5px solid var(--navy);border-radius:20px;background:var(--navy);color:white;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;}
+#load-overlay button:hover{background:var(--navy-mid);}
+</style>
+</head>
+<body>
+
+<!-- LOADING / ERROR OVERLAY — hidden once loadData() resolves. Shown again (with error text) on failure. -->
+<div id="load-overlay">
+  <div class="spinner"></div>
+  <div class="msg">Loading latest data…</div>
+  <div class="sub" id="load-sub">Fetching live figures from the season sheet.</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <h1>ANANDA FARM</h1>
+    <p class="tagline">Happiness Grows Here &nbsp;·&nbsp; Terra Ceia Island, FL</p>
+  </div>
+  <div class="header-right">
+    <div class="season-badge">Spring 2026 Season</div>
+    <p class="header-meta">Master Operations Dashboard &nbsp;·&nbsp; <span id="last-updated">Loading latest data…</span></p>
+    <p class="header-meta" style="margin-top:3px;">Manager: Chris &nbsp;·&nbsp; Owner: Ryan Malone</p>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="section-tabs">
+  <button class="active" onclick="switchTab('ops',this)">📊 Operations</button>
+  <button onclick="switchTab('fb',this)" style="display:none">🍕 F&B Labor</button>
+  <button onclick="switchTab('opslabor',this)" style="display:none">👷 Ops Labor</button>
+</div>
+
+<!-- FILTER BAR (ops only) -->
+<div class="filter-bar" id="ops-filter-bar">
+  <span class="filter-label">Range:</span>
+  <button class="filter-btn" onclick="setRange(7,this)">Last 7 Days</button>
+  <button class="filter-btn" onclick="setRange(30,this)">Last 30 Days</button>
+  <button class="filter-btn" onclick="setRange(90,this)">Last 90 Days</button>
+  <button class="filter-btn active" onclick="setRange(0,this)">Full Season</button>
+  <span class="filter-sep">|</span>
+  <span class="filter-label">View:</span>
+  <button class="view-btn active" onclick="setView('daily',this)">Daily</button>
+  <button class="view-btn" onclick="setView('weekly',this)">Weekly</button>
+</div>
+
+<!-- ═══════════════ OPERATIONS TAB ═══════════════ -->
+<div class="section active" id="section-ops">
+
+  <!-- Season Hero Banner -->
+  <div class="hero-banner" style="margin-bottom:22px;margin-top:4px;">
+    <div>
+      <h2>Spring 2026 Season in Progress</h2>
+      <p id="hero-sub">—</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="val" id="hs-rev">—</div><div class="lbl">Season Revenue</div></div>
+      <div class="hero-stat"><div class="val" id="hs-att">—</div><div class="lbl">Total Guests</div></div>
+      <div class="hero-stat"><div class="val" id="hs-cap">—</div><div class="lbl">Avg Per Cap</div></div>
+      <div class="hero-stat"><div class="val">39</div><div class="lbl">Op. Days</div></div>
+    </div>
+  </div>
+
+  <div class="sec-head">Season at a Glance — Spring 2026</div>
+  <div class="kpi-row" id="kpi-row"></div>
+
+  <div class="sec-head">Most Recent Operating Days</div>
+  <div class="recent-strip" id="recent-strip"></div>
+
+  <div class="sec-head">Revenue</div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Revenue by Operating Day</div>
+      <div class="chart-sub">Stacked by category — Admissions · Bar · F&B · Retail · Other</div>
+      <div class="chart-container"><canvas id="revenueChart" height="260"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Revenue Mix</div>
+      <div class="chart-sub">Full-season category breakdown</div>
+      <div class="chart-container"><canvas id="mixChart" height="260"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec-head">Attendance & Per Capita</div>
+  <div class="charts-row-equal">
+    <div class="chart-card">
+      <div class="chart-title">Attendance by Operating Day</div>
+      <div class="chart-sub">Total guests through the gate &nbsp;·&nbsp; <span style="color:var(--navy);font-weight:700">■</span> Sat &nbsp;<span style="color:var(--teal);font-weight:700">■</span> Sun &nbsp;<span style="color:var(--gold);font-weight:700">■</span> Fri &nbsp;<span style="color:var(--coral);font-weight:700">■</span> Other</div>
+      <div class="chart-container"><canvas id="attChart" height="220"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Per Capita Spend</div>
+      <div class="chart-sub">Total revenue ÷ attendance per day</div>
+      <div class="chart-container"><canvas id="capChart" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec-head">Year-Over-Year Monthly Comparison</div>
+  <div class="monthly-card">
+    <table id="monthly-table"></table>
+  </div>
+
+  <div class="sec-head">Full Season Day Log</div>
+  <div class="table-wrap">
+    <table id="day-table"></table>
+  </div>
+
+</div>
+
+<!-- ═══════════════ F&B LABOR TAB ═══════════════ -->
+<div class="section" id="section-fb">
+
+  <div class="hero-banner">
+    <div>
+      <h2>F&B Labor — Spring 2026</h2>
+      <p>Bartenders · Pizza · Servers · Support &nbsp;·&nbsp; Weeks 1–13 Complete</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="val">4,215</div><div class="lbl">Actual Hours</div></div>
+      <div class="hero-stat"><div class="val">$73,819</div><div class="lbl">Labor Spend</div></div>
+      <div class="hero-stat"><div class="val">27.5%</div><div class="lbl">Avg Labor %</div></div>
+      <div class="hero-stat"><div class="val">13</div><div class="lbl">Weeks Tracked</div></div>
+    </div>
+  </div>
+
+  <div class="sec-head">Season KPIs</div>
+  <div class="insight-row">
+    <div class="insight-card">
+      <div class="insight-icon">⏱</div>
+      <div class="insight-val">4,215</div>
+      <div class="insight-lbl">Total Actual Hours</div>
+      <div class="insight-sub">vs 4,343 scheduled</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">💵</div>
+      <div class="insight-val">$73,819</div>
+      <div class="insight-lbl">Total Labor Spend</div>
+      <div class="insight-sub">F&B dept YTD</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">📉</div>
+      <div class="insight-val">12.8%</div>
+      <div class="insight-lbl">Best Labor %</div>
+      <div class="insight-sub">Wk 11 — Spring Break peak</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon">🏆</div>
+      <div class="insight-val">3,036</div>
+      <div class="insight-lbl">Best Attendance Week</div>
+      <div class="insight-sub">Wk 6 — Val + Presidents Day</div>
+    </div>
+  </div>
+
+  <div class="sec-head">Scheduled vs. Actual Hours (Week by Week)</div>
+  <div class="chart-card" style="margin-bottom:24px;">
+    <div class="chart-title">Hours: Scheduled vs. Actual</div>
+    <div class="chart-sub">Wk 4 excluded (closed weekend — flower event only)</div>
+    <div class="chart-container"><canvas id="hoursChart" height="220"></canvas></div>
+  </div>
+
+  <div class="sec-head">Labor % vs. Attendance</div>
+  <div class="charts-row-equal">
+    <div class="chart-card">
+      <div class="chart-title">Labor % Trend (F&B)</div>
+      <div class="chart-sub">% of revenue going to F&B labor — lower is better as season fills up</div>
+      <div class="chart-container"><canvas id="laborPctChart" height="220"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Attendance vs. Labor $ (F&B)</div>
+      <div class="chart-sub">Correlation between guest count and labor spend</div>
+      <div class="chart-container"><canvas id="attLaborChart" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec-head">Week-by-Week Detail</div>
+  <div class="table-wrap">
+    <table id="wow-table"></table>
+  </div>
+
+</div>
+
+<!-- ═══════════════ OPS LABOR TAB ═══════════════ -->
+<div class="section" id="section-opslabor">
+
+  <div class="hero-banner">
+    <div>
+      <h2>Ops Labor — Current Week</h2>
+      <p>April 6 – 12, 2026 &nbsp;·&nbsp; Schedule generated Apr 7, 2026</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="val">500.5</div><div class="lbl">Hrs Scheduled</div></div>
+      <div class="hero-stat"><div class="val">$9,349</div><div class="lbl">Projected Spend</div></div>
+      <div class="hero-stat"><div class="val">46</div><div class="lbl">Team Members</div></div>
+      <div class="hero-stat"><div class="val">5</div><div class="lbl">Departments</div></div>
+    </div>
+  </div>
+
+  <div class="sec-head">Department Snapshot</div>
+  <div class="dept-row">
+    <div class="dept-card navy">
+      <div class="dept-name">Attractions &amp; Parking</div>
+      <div class="dept-hrs">255 <span style="font-family:Inter;font-size:1rem;color:var(--mid)">hrs</span></div>
+      <div class="dept-cost">$3,665.75</div>
+      <div class="dept-count">25 team members</div>
+    </div>
+    <div class="dept-card gold">
+      <div class="dept-name">Admissions &amp; Retail</div>
+      <div class="dept-hrs">103.5 <span style="font-family:Inter;font-size:1rem;color:var(--mid)">hrs</span></div>
+      <div class="dept-cost">$1,669.50</div>
+      <div class="dept-count">6 team members</div>
+    </div>
+    <div class="dept-card teal">
+      <div class="dept-name">Custodial &amp; Maintenance</div>
+      <div class="dept-hrs">48 <span style="font-family:Inter;font-size:1rem;color:var(--mid)">hrs</span></div>
+      <div class="dept-cost">$788.50</div>
+      <div class="dept-count">3 team members</div>
+    </div>
+    <div class="dept-card coral">
+      <div class="dept-name">Farm Hands</div>
+      <div class="dept-hrs">80 <span style="font-family:Inter;font-size:1rem;color:var(--mid)">hrs</span></div>
+      <div class="dept-cost">$1,920.00</div>
+      <div class="dept-count">4 team members</div>
+    </div>
+    <div class="dept-card green">
+      <div class="dept-name">Admin</div>
+      <div class="dept-hrs">45 <span style="font-family:Inter;font-size:1rem;color:var(--mid)">hrs</span></div>
+      <div class="dept-cost">$1,305.00</div>
+      <div class="dept-count">1 team member</div>
+    </div>
+  </div>
+
+  <div class="sec-head">Hours &amp; Cost by Department</div>
+  <div class="charts-row-equal">
+    <div class="chart-card">
+      <div class="chart-title">Scheduled Hours by Department</div>
+      <div class="chart-sub">Week of Apr 6–12, 2026</div>
+      <div class="chart-container"><canvas id="deptHrsChart" height="220"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Labor Cost by Department</div>
+      <div class="chart-sub">Projected spend — scheduled hours × rate</div>
+      <div class="chart-container"><canvas id="deptCostChart" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <div class="sec-head">Team Roster — Apr 6–12, 2026</div>
+
+  <div class="staff-section">
+    <div class="staff-dept-header">🎡 Attractions &amp; Parking — 25 Members · 255 hrs · $3,665.75</div>
+    <div class="table-wrap" style="margin-bottom:0;">
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Hrs Sched</th><th>$/hr</th><th>Proj. Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Figueroa, Alex</td><td>Team Member</td><td class="tbl-num">17.25</td><td>$14</td><td class="tbl-num">$241.50</td></tr>
+        <tr><td>Pierre, Ally</td><td>Team Member</td><td class="tbl-num">13.00</td><td>$14</td><td class="tbl-num">$182.00</td></tr>
+        <tr><td>Villarreal, Anasofia</td><td>Team Member</td><td class="tbl-num">11.00</td><td>$14</td><td class="tbl-num">$154.00</td></tr>
+        <tr><td>Ortiz, Andrew</td><td>Team Member</td><td class="tbl-num">6.00</td><td>$14</td><td class="tbl-num">$84.00</td></tr>
+        <tr><td>Krater, Aspen</td><td>Team Lead</td><td class="tbl-num">17.00</td><td>$14</td><td class="tbl-num">$238.00</td></tr>
+        <tr><td>Merideth, Charles</td><td>Team Member</td><td class="tbl-num">18.25</td><td>$14</td><td class="tbl-num">$255.50</td></tr>
+        <tr><td>Joseph, Chloe</td><td>Team Member</td><td class="tbl-num">11.25</td><td>$14</td><td class="tbl-num">$157.50</td></tr>
+        <tr><td>Nelson, Dalton</td><td>Team Member</td><td class="tbl-num">5.75</td><td>$16</td><td class="tbl-num">$92.00</td></tr>
+        <tr><td>Johnson, Ellen</td><td>Team Member</td><td class="tbl-num">11.50</td><td>$14</td><td class="tbl-num">$161.00</td></tr>
+        <tr><td>Santiago, Enky</td><td>Team Member</td><td class="tbl-num">4.25</td><td>$14</td><td class="tbl-num">$59.50</td></tr>
+        <tr><td>Lopez, Enrique</td><td>Team Member</td><td class="tbl-num">7.00</td><td>$14</td><td class="tbl-num">$98.00</td></tr>
+        <tr><td>Garbutt, Erin</td><td>Team Member</td><td class="tbl-num">5.25</td><td>$14</td><td class="tbl-num">$73.50</td></tr>
+        <tr><td>Nicka, Jack</td><td>Team Member</td><td class="tbl-num">5.50</td><td>$14</td><td class="tbl-num">$77.00</td></tr>
+        <tr><td>Spurlock, Jhalana</td><td>Team Member</td><td class="tbl-num">5.25</td><td>$14</td><td class="tbl-num">$73.50</td></tr>
+        <tr><td>Covey, Karen</td><td>Team Member</td><td class="tbl-num">12.00</td><td>$14</td><td class="tbl-num">$168.00</td></tr>
+        <tr><td>Deering, Kaylan</td><td>Team Lead</td><td class="tbl-num">22.00</td><td>$17</td><td class="tbl-num">$374.00</td></tr>
+        <tr><td>Peterson, KP</td><td>Team Member</td><td class="tbl-num">11.00</td><td>$14</td><td class="tbl-num">$154.00</td></tr>
+        <tr><td>Blanc, Leylah</td><td>Team Member</td><td class="tbl-num">10.75</td><td>$14</td><td class="tbl-num">$150.50</td></tr>
+        <tr><td>Davenport, Madison</td><td>Team Member</td><td class="tbl-num">4.25</td><td>$14</td><td class="tbl-num">$59.50</td></tr>
+        <tr><td>Carroll, Paige</td><td>Team Member</td><td class="tbl-num">11.00</td><td>$14</td><td class="tbl-num">$154.00</td></tr>
+        <tr><td>Kight, Ryker</td><td>Team Lead</td><td class="tbl-num">16.50</td><td>$14</td><td class="tbl-num">$231.00</td></tr>
+        <tr><td>Saal, Tailyn</td><td>Team Member</td><td class="tbl-num">5.50</td><td>$14</td><td class="tbl-num">$77.00</td></tr>
+        <tr><td>Deering, Taylor</td><td>Team Member</td><td class="tbl-num">18.25</td><td>$15</td><td class="tbl-num">$273.75</td></tr>
+        <tr><td>Matthews, Zoey</td><td>Team Member</td><td class="tbl-num">5.50</td><td>$14</td><td class="tbl-num">$77.00</td></tr>
+        <tr style="background:var(--cream-dark);font-weight:700;"><td colspan="2">SUBTOTAL</td><td class="tbl-num">255.00</td><td>—</td><td class="tbl-num">$3,665.75</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="staff-dept-header" style="margin-top:2px;">🎟 Admissions &amp; Retail — 6 Members · 103.5 hrs · $1,669.50</div>
+    <div class="table-wrap" style="margin-bottom:0;">
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Hrs Sched</th><th>$/hr</th><th>Proj. Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Walker, Cassie</td><td>Team Member</td><td class="tbl-num">9.25</td><td>$14</td><td class="tbl-num">$129.50</td></tr>
+        <tr><td>Dyer, Jennifer</td><td>Team Member</td><td class="tbl-num">4.25</td><td>$14</td><td class="tbl-num">$59.50</td></tr>
+        <tr><td>Worden, Laura</td><td>Team Member</td><td class="tbl-num">16.50</td><td>$15</td><td class="tbl-num">$247.50</td></tr>
+        <tr><td>Maguire, Laurie</td><td>Admissions &amp; Parties</td><td class="tbl-num">23.25</td><td>$14</td><td class="tbl-num">$325.50</td></tr>
+        <tr><td>Nelson, Sierra</td><td>Team Member</td><td class="tbl-num">16.25</td><td>$14</td><td class="tbl-num">$227.50</td></tr>
+        <tr><td>Pitman, Stacey</td><td>Admissions &amp; Retail Lead</td><td class="tbl-num">34.00</td><td>$20</td><td class="tbl-num">$680.00</td></tr>
+        <tr style="background:var(--cream-dark);font-weight:700;"><td colspan="2">SUBTOTAL</td><td class="tbl-num">103.50</td><td>—</td><td class="tbl-num">$1,669.50</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="staff-dept-header" style="margin-top:2px;">🔧 Custodial &amp; Maintenance — 3 Members · 48 hrs · $788.50</div>
+    <div class="table-wrap" style="margin-bottom:0;">
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Hrs Sched</th><th>$/hr</th><th>Proj. Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Tucholski, CT</td><td>Custodial Lead</td><td class="tbl-num">20.50</td><td>$17</td><td class="tbl-num">$348.50</td></tr>
+        <tr><td>Gower, Tyler</td><td>Maintenance / Custodial / Tractor</td><td class="tbl-num">10.50</td><td>$16</td><td class="tbl-num">$168.00</td></tr>
+        <tr><td>Serdyn, William</td><td>Maintenance / Custodial / Tractor</td><td class="tbl-num">17.00</td><td>$16</td><td class="tbl-num">$272.00</td></tr>
+        <tr style="background:var(--cream-dark);font-weight:700;"><td colspan="2">SUBTOTAL</td><td class="tbl-num">48.00</td><td>—</td><td class="tbl-num">$788.50</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="staff-dept-header" style="margin-top:2px;">🌾 Farm Hands — 4 Members · 80 hrs · $1,920.00</div>
+    <div class="table-wrap" style="margin-bottom:0;">
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Hrs Sched</th><th>$/hr</th><th>Proj. Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Herman, Hosea</td><td>Farm Hand</td><td class="tbl-num">0</td><td>$16</td><td class="tbl-num">—</td></tr>
+        <tr><td>Herman, Jerry</td><td>Farm Hand</td><td class="tbl-num">0</td><td>$16</td><td class="tbl-num">—</td></tr>
+        <tr><td>Mondragon Villa, Juan</td><td>Farm Hand</td><td class="tbl-num">40.00</td><td>$28</td><td class="tbl-num">$1,120.00</td></tr>
+        <tr><td>Singleton, Pam</td><td>Farm Hand</td><td class="tbl-num">40.00</td><td>$20</td><td class="tbl-num">$800.00</td></tr>
+        <tr style="background:var(--cream-dark);font-weight:700;"><td colspan="2">SUBTOTAL</td><td class="tbl-num">80.00</td><td>—</td><td class="tbl-num">$1,920.00</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="staff-dept-header" style="margin-top:2px;">🏢 Admin — 1 Member · 45 hrs · $1,305.00</div>
+    <div class="table-wrap" style="margin-bottom:0;">
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Hrs Sched</th><th>$/hr</th><th>Proj. Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Deering, Sasha</td><td>Admin</td><td class="tbl-num">45.00</td><td>$29</td><td class="tbl-num">$1,305.00</td></tr>
+        <tr style="background:var(--cream-dark);font-weight:700;"><td colspan="2">SUBTOTAL</td><td class="tbl-num">45.00</td><td>—</td><td class="tbl-num">$1,305.00</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div style="background:var(--navy);color:white;padding:12px 16px;display:flex;gap:40px;align-items:center;border-radius:0 0 10px 10px;flex-wrap:wrap;">
+      <div style="text-align:center;"><div style="font-family:'Abril Fatface',serif;font-size:1.4rem;color:var(--gold);">500.5</div><div style="font-size:.68rem;opacity:.65;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Total Hrs</div></div>
+      <div style="text-align:center;"><div style="font-family:'Abril Fatface',serif;font-size:1.4rem;color:var(--gold);">$9,348.75</div><div style="font-size:.68rem;opacity:.65;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Total Proj. Cost</div></div>
+      <div style="text-align:center;"><div style="font-family:'Abril Fatface',serif;font-size:1.4rem;color:var(--gold);">46</div><div style="font-size:.68rem;opacity:.65;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Team Members</div></div>
+      <div style="text-align:center;"><div style="font-family:'Abril Fatface',serif;font-size:1.4rem;color:var(--gold);">$18.65</div><div style="font-size:.68rem;opacity:.65;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;">Avg $/hr</div></div>
+    </div>
+  </div>
+
+</div><!-- end ops labor -->
+
+<script>
+// ══════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════
+// DAILY is populated at page load from the published Google Sheet (Spring 2026 Master tab).
+// If you need to update the source, edit CSV_URL below — it must be a /pub?...output=csv link.
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm64_iL4dGKbi-bFkO9eg1OyDMPyuExf77BTmHFuaZTJXGRXB8jfJKR4zhKyQy9bdF1xKGa9rMNsjT/pub?gid=1881912250&single=true&output=csv';
+
+let DAILY = [];
+
+// Strip $ and commas; return 0 for blank/non-numeric so sums don't break.
+function parseMoney(s) {
+  if (s == null) return 0;
+  const cleaned = String(s).replace(/[$,\s]/g, '').trim();
+  if (!cleaned) return 0;
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+// "1/10/26" → "2026-01-10"   (assumes 20xx for any 2-digit year — fine through 2099)
+function normalizeDate(s) {
+  if (!s) return '';
+  const parts = String(s).trim().split('/');
+  if (parts.length !== 3) return '';
+  const [m, d, y] = parts;
+  const yyyy = y.length === 2 ? '20' + y : y;
+  return `${yyyy}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+// Map a Papa.parse row → our DAILY shape. Headers in the sheet have embedded
+// newlines (e.g. "Total\nAttendance") so we look them up flexibly.
+function rowToDaily(row) {
+  // Normalize header keys: collapse whitespace, lowercase.
+  const get = (...names) => {
+    for (const n of names) {
+      for (const k of Object.keys(row)) {
+        if (k.replace(/\s+/g,' ').trim().toLowerCase() === n.toLowerCase()) {
+          return row[k];
+        }
+      }
+    }
+    return '';
+  };
+  const att = parseInt(String(get('Total Attendance')).replace(/[,\s]/g,''), 10) || 0;
+  const adm = parseMoney(get('Admission Total $'));
+  const bar = parseMoney(get('Bar $'));
+  const fb  = parseMoney(get('F&B $'));
+  const ret = parseMoney(get('Retail $'));
+  const oth = parseMoney(get('Other'));
+  const sqr = parseMoney(get('Square Total $'));
+  const rev = parseMoney(get('Total Revenue'));
+  // Recompute per-cap from totals instead of trusting the sheet's "Per Cap" column —
+  // the sheet calculates it from Square only, and we want rev-based per-cap elsewhere.
+  // Renderers expect `cap` to match Square per-cap (matches existing KPI logic).
+  const cap = att > 0 ? sqr / att : 0;
+  return {
+    date: normalizeDate(get('Date')),
+    dow:  String(get('Day of Week') || '').trim(),
+    att, adm, bar, fb, ret, oth, sqr, rev, cap
+  };
+}
+
+// Fetch + parse the published CSV. Resolves to an array of DAILY rows.
+// Filter: keep only real operating days (attendance > 0). This matches the
+// dashboard's design (charts and per-cap assume real visitor days) and drops
+// the many weekday rows that carry only incidental Square transactions.
+async function loadData() {
+  const res = await fetch(CSV_URL, {cache: 'no-store'});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  const parsed = Papa.parse(text, {header: true, skipEmptyLines: true});
+  if (parsed.errors && parsed.errors.length) {
+    // PapaParse reports row-level issues but still returns data — log, don't throw.
+    console.warn('CSV parse warnings:', parsed.errors.slice(0, 3));
+  }
+  const rows = parsed.data
+    .map(rowToDaily)
+    .filter(d => d.date && d.att > 0)   // real operating days only
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return rows;
+}
+
+const WOW = [
+  {week:'1',dates:'1/9–1/11',sched:463.75,actual:476.36,labor_pct:0.6434,labor_dol:8063.89,att:761,note:'Opening Week'},
+  {week:'2',dates:'1/16–1/18',sched:337.85,actual:231.87,labor_pct:0.4018,labor_dol:4290.79,att:646,note:'Closed Friday — Storm'},
+  {week:'3',dates:'1/23–1/25',sched:301.25,actual:296.72,labor_pct:0.4196,labor_dol:5345.69,att:866,note:'Fair in town. Windy'},
+  {week:'4',dates:'1/30–2/1',sched:4.5,actual:4.5,labor_pct:null,labor_dol:null,att:25,note:'Thursday flower event. Closed weekend'},
+  {week:'5',dates:'2/6–2/8',sched:278.5,actual:297.79,labor_pct:0.2974,labor_dol:5560.08,att:1108,note:'First normal Saturday. Superbowl Sunday'},
+  {week:'6',dates:'2/13–2/16',sched:419.5,actual:468.73,labor_pct:0.1999,labor_dol:8373.96,att:3036,note:'Double holiday: Valentine + Presidents Day'},
+  {week:'7',dates:'2/20–2/22',sched:353.5,actual:264.17,labor_pct:0.1878,labor_dol:4666.29,att:1271,note:'Boat Regatta'},
+  {week:'8',dates:'2/27–3/1',sched:272.0,actual:252.83,labor_pct:0.2364,labor_dol:4607.85,att:1106,note:'Grand Prix'},
+  {week:'9',dates:'3/6–3/8',sched:366.5,actual:321.10,labor_pct:0.2997,labor_dol:5796.03,att:863,note:'Strawberry Festival'},
+  {week:'10',dates:'3/13–3/15',sched:368.5,actual:338.62,labor_pct:0.2226,labor_dol:5711.77,att:1450,note:'Weather: storms forecast'},
+  {week:'SB',dates:'3/16–3/19',sched:219.0,actual:243.47,labor_pct:0.1726,labor_dol:4138.76,att:2255,note:'Spring Break — bad weather Mon/Tue'},
+  {week:'11',dates:'3/20–3/22',sched:371.65,actual:374.87,labor_pct:0.1284,labor_dol:6272.22,att:2955,note:'Spring Break peak — busy!'},
+  {week:'12',dates:'3/27–3/29',sched:330.0,actual:300.33,labor_pct:0.1834,labor_dol:5126.82,att:1650,note:'Post Spring Break'},
+  {week:'13',dates:'4/3–4/5',sched:355.5,actual:343.20,labor_pct:0.1833,labor_dol:5864.82,att:2016,note:'Easter Weekend!'}
+];
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let currentRange = 0; // 0 = full
+let currentView = 'daily';
+let charts = {};
+
+// ══════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════
+const tabsInited = {ops:false,fb:false,opslabor:false};
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.section-tabs button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('section-'+tab).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('ops-filter-bar').style.display = (tab==='ops') ? 'flex' : 'none';
+  // Lazy init charts for tabs that need them
+  if (!tabsInited[tab]) {
+    tabsInited[tab] = true;
+    if (tab==='fb') { renderFBCharts(); renderWoWTable(); }
+    if (tab==='opslabor') renderOpsCharts();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  FILTER
+// ══════════════════════════════════════════════
+function setRange(days, btn) {
+  currentRange = days;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function setView(v, btn) {
+  currentView = v;
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function getFilteredData() {
+  if (currentRange === 0) return DAILY;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - currentRange);
+  return DAILY.filter(d => new Date(d.date) >= cutoff);
+}
+
+function aggregateWeekly(data) {
+  const weeks = {};
+  data.forEach(d => {
+    const dt = new Date(d.date);
+    // ISO week Monday
+    const day = dt.getDay() || 7;
+    const mon = new Date(dt); mon.setDate(dt.getDate() - day + 1);
+    const key = mon.toISOString().slice(0,10);
+    if (!weeks[key]) weeks[key] = {date:key,att:0,adm:0,bar:0,fb:0,ret:0,oth:0,sqr:0,rev:0,count:0};
+    weeks[key].att += d.att; weeks[key].adm += d.adm; weeks[key].bar += d.bar;
+    weeks[key].fb += d.fb; weeks[key].ret += d.ret; weeks[key].oth += d.oth;
+    weeks[key].sqr += d.sqr; weeks[key].rev += d.rev; weeks[key].count++;
+  });
+  return Object.values(weeks).sort((a,b)=>a.date.localeCompare(b.date))
+    .map(w => ({...w, cap: w.att > 0 ? w.rev/w.att : 0,
+      dow: 'Week of '+new Date(w.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}));
+}
+
+// ══════════════════════════════════════════════
+//  FORMAT HELPERS
+// ══════════════════════════════════════════════
+const fmt$ = v => '$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtK = v => v>=1000?'$'+(v/1000).toFixed(1)+'k':fmt$(v);
+const fmtN = v => v.toLocaleString();
+const fmtPct = v => (v*100).toFixed(1)+'%';
+function shortDate(s){const d=new Date(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function fullDate(s){const d=new Date(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+
+// ══════════════════════════════════════════════
+//  KPI CARDS
+// ══════════════════════════════════════════════
+function renderKPIs(data) {
+  const totalRev = data.reduce((s,d)=>s+d.rev,0);
+  const totalAtt = data.reduce((s,d)=>s+d.att,0);
+  const totalSqr = data.reduce((s,d)=>s+d.sqr,0);
+  // Per cap = Square (in-venue) spend per guest, matching how source data calculates it
+  const avgCap   = totalAtt > 0 ? totalSqr/totalAtt : 0;
+  const totalAdm = data.reduce((s,d)=>s+d.adm,0);
+  const totalBar = data.reduce((s,d)=>s+d.bar,0);
+  const totalFB  = data.reduce((s,d)=>s+d.fb,0);
+  const totalRet = data.reduce((s,d)=>s+d.ret,0);
+  const maxDay   = data.reduce((mx,d)=>d.rev>mx.rev?d:mx, data[0]);
+
+  // Spring 2025 avg per cap from Monthly data ~$23.88 (Feb) / $21.28 (Mar)
+  const prevCap = 22.5; // blended Spring 2025 avg
+  const capDelta = ((avgCap - prevCap)/prevCap);
+
+  const cards = [
+    {label:'Total Revenue',value:fmt$(totalRev),sub:data.length+' operating days',color:'navy'},
+    {label:'Total Attendance',value:fmtN(totalAtt),sub:'Guests through the gate',color:'teal'},
+    {label:'Avg Per Capita',value:'$'+avgCap.toFixed(2),sub:'Revenue per guest',color:'gold',
+      change: capDelta, changeLbl: 'vs Spring \'25 avg $'+prevCap.toFixed(2)},
+    {label:'Admissions',value:fmt$(totalAdm),sub:(totalRev>0?(totalAdm/totalRev*100).toFixed(1):0)+'% of revenue',color:'coral'},
+    {label:'Bar Revenue',value:fmt$(totalBar),sub:(totalRev>0?(totalBar/totalRev*100).toFixed(1):0)+'% of revenue',color:'teal'},
+    {label:'Best Single Day',value:fmtK(maxDay.rev),sub:fullDate(maxDay.date)+' · '+fmtN(maxDay.att)+' guests',color:'green'},
+  ];
+
+  // Fill hero banner with full-season totals
+  const fullRev  = DAILY.reduce((s,d)=>s+d.rev,0);
+  const fullAtt  = DAILY.reduce((s,d)=>s+d.att,0);
+  const fullSqr  = DAILY.reduce((s,d)=>s+d.sqr,0);
+  const fullCap  = fullSqr / fullAtt; // in-venue spend per guest
+  document.getElementById('hs-rev').textContent = '$'+Math.round(fullRev/1000)+'k';
+  document.getElementById('hs-att').textContent = fmtN(fullAtt);
+  document.getElementById('hs-cap').textContent = '$'+fullCap.toFixed(2);
+
+  const row = document.getElementById('kpi-row');
+  row.innerHTML = cards.map(c=>`
+    <div class="kpi-card ${c.color}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+      ${c.change!==undefined?`<div class="kpi-change ${c.change>=0?'up':'down'}">${c.change>=0?'▲':'▼'} ${Math.abs(c.change*100).toFixed(1)}% ${c.changeLbl}</div>`:''}
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  RECENT STRIP
+// ══════════════════════════════════════════════
+function renderRecent(data) {
+  const last8 = [...data].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8).reverse();
+  const maxRev = Math.max(...last8.map(d=>d.rev));
+  document.getElementById('recent-strip').innerHTML = last8.map(d=>`
+    <div class="recent-day ${d.rev===maxRev?'best':''}">
+      <div class="rd-date">${d.dow.slice(0,3)} ${shortDate(d.date)}</div>
+      <div class="rd-rev">${fmtK(d.rev)}</div>
+      <div class="rd-att">${fmtN(d.att)} guests</div>
+      <div class="rd-cap">$${d.cap.toFixed(2)}/cap</div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+//  CHART HELPERS
+// ══════════════════════════════════════════════
+const COLORS = {
+  navy:'#00274c', navyA:'rgba(0,39,76,0.85)',
+  gold:'#febc1a', goldA:'rgba(254,188,26,0.85)',
+  teal:'#63b0b8', tealA:'rgba(99,176,184,0.85)',
+  coral:'#e07b39', coralA:'rgba(224,123,57,0.85)',
+  green:'#2e7d32', greenA:'rgba(46,125,50,0.85)',
+  red:'#c62828', redA:'rgba(198,40,40,0.85)',
+  purple:'#6c5ce7', purpleA:'rgba(108,92,231,0.85)',
+};
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function makeChart(id, cfg) {
+  destroyChart(id);
+  charts[id] = new Chart(document.getElementById(id).getContext('2d'), cfg);
+}
+
+// ══════════════════════════════════════════════
+//  REVENUE CHART
+// ══════════════════════════════════════════════
+function renderRevenueChart(data) {
+  const labels = data.map(d => shortDate(d.date));
+  makeChart('revenueChart', {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Admissions', data:data.map(d=>d.adm), backgroundColor:COLORS.navyA, stack:'s'},
+        {label:'Bar',        data:data.map(d=>d.bar), backgroundColor:COLORS.tealA, stack:'s'},
+        {label:'F&B',        data:data.map(d=>d.fb),  backgroundColor:COLORS.goldA, stack:'s'},
+        {label:'Retail',     data:data.map(d=>d.ret), backgroundColor:COLORS.coralA, stack:'s'},
+        {label:'Other',      data:data.map(d=>d.oth), backgroundColor:'rgba(108,92,231,0.7)', stack:'s'},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}},
+               tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': $'+ctx.raw.toLocaleString('en-US',{maximumFractionDigits:0})}}},
+      scales:{x:{stacked:true,ticks:{font:{size:10},maxRotation:45}},y:{stacked:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  MIX DONUT
+// ══════════════════════════════════════════════
+function renderMixChart(data) {
+  const totAdm = data.reduce((s,d)=>s+d.adm,0);
+  const totBar = data.reduce((s,d)=>s+d.bar,0);
+  const totFB  = data.reduce((s,d)=>s+d.fb,0);
+  const totRet = data.reduce((s,d)=>s+d.ret,0);
+  const totOth = data.reduce((s,d)=>s+d.oth,0);
+  makeChart('mixChart', {
+    type:'doughnut',
+    data:{
+      labels:['Admissions','Bar','F&B','Retail','Other'],
+      datasets:[{data:[totAdm,totBar,totFB,totRet,totOth],
+        backgroundColor:[COLORS.navy,COLORS.teal,COLORS.gold,COLORS.coral,COLORS.purple],
+        borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{
+      responsive:true,cutout:'60%',
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}},
+               tooltip:{callbacks:{label:ctx=>{const tot=ctx.dataset.data.reduce((a,b)=>a+b,0);return ' '+ctx.label+': $'+ctx.raw.toLocaleString('en-US',{maximumFractionDigits:0})+' ('+((ctx.raw/tot)*100).toFixed(1)+'%)';}}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  ATTENDANCE CHART
+// ══════════════════════════════════════════════
+function dayColor(dow) {
+  if(dow==='Saturday') return COLORS.navyA;
+  if(dow==='Sunday')   return COLORS.tealA;
+  if(dow==='Friday')   return COLORS.goldA;
+  return COLORS.coralA; // Mon/Tue/Wed/Thu (spring break)
+}
+
+function renderAttChart(data) {
+  const isWeekly = currentView === 'weekly';
+  const labels = data.map(d=> isWeekly ? 'Wk of '+shortDate(d.date) : shortDate(d.date));
+  makeChart('attChart', {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{label:'Attendance',data:data.map(d=>d.att),
+        backgroundColor: isWeekly
+          ? COLORS.navyA
+          : data.map(d=>dayColor(d.dow)),
+        borderRadius:4}]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>' '+fmtN(ctx.raw)+' guests',
+          afterLabel: isWeekly ? undefined : (ctx)=>{
+            const d=data[ctx.dataIndex];
+            return d ? ' '+d.dow : '';
+          }}}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:45}},y:{ticks:{callback:v=>fmtN(v)}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  PER CAP CHART
+// ══════════════════════════════════════════════
+function renderCapChart(data) {
+  const isWeekly = currentView === 'weekly';
+  const labels = data.map(d=> isWeekly ? 'Wk of '+shortDate(d.date) : shortDate(d.date));
+  const avgCap = data.reduce((s,d)=>s+d.cap,0)/data.length;
+  makeChart('capChart', {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:'Per Capita',data:data.map(d=>d.cap),
+         borderColor:COLORS.teal,backgroundColor:'rgba(99,176,184,0.12)',
+         tension:0.35,fill:true,pointRadius:4,pointBackgroundColor:COLORS.teal},
+        {label:'Season Avg',data:data.map(()=>avgCap),
+         borderColor:COLORS.gold,borderDash:[6,4],borderWidth:2,pointRadius:0,tension:0}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{font:{size:11},boxWidth:12}},
+               tooltip:{callbacks:{label:ctx=>' $'+ctx.raw.toFixed(2)}}},
+      scales:{x:{ticks:{font:{size:10},maxRotation:45}},
+              y:{ticks:{callback:v=>'$'+v.toFixed(0)}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  MONTHLY TABLE
+// ══════════════════════════════════════════════
+function renderMonthlyTable() {
+  const data = [
+    {label:'Total Op. Days', feb25:13, mar25:14, apr25:12, may25:13, jan26:12, feb26:'—', mar26:'—'},
+    {label:'Total Attendance', feb25:'6,756', mar25:'12,759', apr25:'7,292', may25:'4,911', jan26:'2,273', feb26:'5,834', mar26:'9,860'},
+    {label:'Total Revenue', feb25:'$313,432', mar25:'$540,580', apr25:'$326,881', may25:'$212,751', jan26:'$89,197', feb26:'$220,255', mar26:'$336,269'},
+    {label:'Avg Per Cap', feb25:'$23.88', mar25:'$21.28', apr25:'$23.87', may25:'$25.86', jan26:'$21.13', feb26:'$22.01', mar26:'$22.12'},
+  ];
+  const heads = ['Metric','Feb \'25','Mar \'25','Apr \'25','May \'25','Jan \'26','Feb \'26','Mar \'26'];
+  let html = '<thead><tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>';
+  data.forEach(row=>{
+    html+=`<tr><td style="font-weight:700;color:var(--navy)">${row.label}</td>
+      <td>${row.feb25}</td><td>${row.mar25}</td><td>${row.apr25}</td><td>${row.may25}</td>
+      <td style="background:rgba(0,39,76,.04);font-weight:700">${row.jan26}</td>
+      <td style="background:rgba(0,39,76,.04);font-weight:700">${row.feb26}</td>
+      <td style="background:rgba(0,39,76,.04);font-weight:700">${row.mar26}</td></tr>`;
+  });
+  html+='</tbody>';
+  document.getElementById('monthly-table').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  DAY TABLE
+// ══════════════════════════════════════════════
+function renderDayTable(data) {
+  let html = `<thead><tr>
+    <th>Date</th><th>Day</th><th>Attendance</th>
+    <th>Admissions</th><th>Bar</th><th>F&B</th><th>Retail</th><th>Other</th>
+    <th>Total Revenue</th><th>Per Cap*</th>
+  </tr></thead><tbody>`;
+  const maxRev = Math.max(...data.map(d=>d.rev));
+  [...data].sort((a,b)=>b.date.localeCompare(a.date)).forEach(d=>{
+    html+=`<tr ${d.rev===maxRev?'style="background:var(--gold-pale)"':''}>
+      <td>${fullDate(d.date)}</td>
+      <td>${d.dow}</td>
+      <td class="tbl-num">${fmtN(d.att)}</td>
+      <td>${fmt$(d.adm)}</td>
+      <td>${fmt$(d.bar)}</td>
+      <td>${fmt$(d.fb)}</td>
+      <td>${fmt$(d.ret)}</td>
+      <td>${fmt$(d.oth)}</td>
+      <td class="tbl-num">${fmt$(d.rev)}</td>
+      <td class="tbl-num">$${d.cap.toFixed(2)}</td>
+    </tr>`;
+  });
+  // Totals row
+  const tRev=data.reduce((s,d)=>s+d.rev,0);
+  const tAtt=data.reduce((s,d)=>s+d.att,0);
+  const tSqr=data.reduce((s,d)=>s+d.sqr,0);
+  const tAdm=data.reduce((s,d)=>s+d.adm,0);
+  const tBar=data.reduce((s,d)=>s+d.bar,0);
+  const tFB =data.reduce((s,d)=>s+d.fb,0);
+  const tRet=data.reduce((s,d)=>s+d.ret,0);
+  const tOth=data.reduce((s,d)=>s+d.oth,0);
+  html+=`<tr style="background:var(--navy);color:white;font-weight:700;">
+    <td>SEASON TOTAL</td><td>${data.length} days</td>
+    <td>${fmtN(tAtt)}</td><td>${fmt$(tAdm)}</td><td>${fmt$(tBar)}</td>
+    <td>${fmt$(tFB)}</td><td>${fmt$(tRet)}</td><td>${fmt$(tOth)}</td>
+    <td style="color:var(--gold)">${fmt$(tRev)}</td>
+    <td style="color:var(--gold)">$${(tSqr/tAtt).toFixed(2)}</td>
+  </tr>
+  <tr><td colspan="10" style="font-size:.72rem;color:var(--light);padding:6px 12px;">*Per Cap = Square (in-venue) spend per guest, excluding admission ticket revenue</td></tr>`;
+  html+='</tbody>';
+  document.getElementById('day-table').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  F&B CHARTS
+// ══════════════════════════════════════════════
+function renderFBCharts() {
+  const active = WOW.filter(w=>w.actual !== null);
+  const withPct = active.filter(w=>w.labor_pct !== null);
+  const labels = active.map(w=>'Wk '+w.week);
+
+  // Hours chart
+  makeChart('hoursChart', {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Scheduled Hrs', data:active.map(w=>w.sched), backgroundColor:'rgba(0,39,76,0.5)', borderRadius:4},
+        {label:'Actual Hrs',    data:active.map(w=>w.actual),backgroundColor:COLORS.tealA, borderRadius:4},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{font:{size:11},boxWidth:12}},
+               tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.raw.toFixed(1)+' hrs'}}},
+      scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>v+'h'}}}
+    }
+  });
+
+  // Labor % trend
+  makeChart('laborPctChart', {
+    type:'line',
+    data:{
+      labels: withPct.map(w=>'Wk '+w.week),
+      datasets:[
+        {label:'Labor %', data:withPct.map(w=>+(w.labor_pct*100).toFixed(1)),
+         borderColor:COLORS.coral,backgroundColor:'rgba(224,123,57,0.12)',
+         tension:0.35,fill:true,pointRadius:5,pointBackgroundColor:COLORS.coral},
+        {label:'25% Target', data:withPct.map(()=>25),
+         borderColor:COLORS.navy,borderDash:[6,4],borderWidth:2,pointRadius:0}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{font:{size:11},boxWidth:12}},
+               tooltip:{callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.raw+'%'}}},
+      scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>v+'%'},min:0}}
+    }
+  });
+
+  // Attendance vs Labor $
+  makeChart('attLaborChart', {
+    type:'bar',
+    data:{
+      labels: withPct.map(w=>'Wk '+w.week),
+      datasets:[
+        {label:'Attendance', data:withPct.map(w=>w.att),
+         backgroundColor:COLORS.navyA,yAxisID:'y',borderRadius:4},
+        {label:'Labor $', data:withPct.map(w=>w.labor_dol),
+         type:'line',borderColor:COLORS.gold,backgroundColor:'rgba(254,188,26,0.15)',
+         tension:0.35,fill:true,yAxisID:'y1',pointRadius:4,pointBackgroundColor:COLORS.gold},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{font:{size:11},boxWidth:12}},
+               tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='Attendance'?' '+fmtN(ctx.raw)+' guests':' $'+ctx.raw.toLocaleString('en-US',{maximumFractionDigits:0})}}},
+      scales:{
+        x:{ticks:{font:{size:10}}},
+        y:{type:'linear',position:'left',ticks:{callback:v=>fmtN(v)}},
+        y1:{type:'linear',position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'k'}}
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  WoW TABLE
+// ══════════════════════════════════════════════
+function renderWoWTable() {
+  let html = `<thead><tr>
+    <th>Week</th><th>Dates</th><th>Attendance</th>
+    <th>Sched. Hrs</th><th>Actual Hrs</th><th>Variance</th>
+    <th>Labor $</th><th>Labor %</th><th>Notes</th>
+  </tr></thead><tbody>`;
+  WOW.forEach(w=>{
+    const hasData = w.labor_pct !== null;
+    const varPct = w.variance ? w.variance : 0;
+    const varClass = varPct > 0.05 ? 'tbl-neg' : varPct < -0.05 ? 'tbl-pos' : '';
+    const lpct = hasData ? fmtPct(w.labor_pct) : '—';
+    const lpctNum = hasData ? w.labor_pct : null;
+    const lpctClass = lpctNum !== null ? (lpctNum <= 0.20 ? 'tbl-pos' : lpctNum >= 0.35 ? 'tbl-neg' : '') : '';
+    html+=`<tr>
+      <td class="tbl-num">Wk ${w.week}</td>
+      <td>${w.dates}</td>
+      <td class="tbl-num">${fmtN(w.att)}</td>
+      <td>${w.sched !== null ? w.sched.toFixed(1) : '—'}</td>
+      <td class="tbl-num">${w.actual !== null ? w.actual.toFixed(1) : '—'}</td>
+      <td class="${varClass}">${w.variance !== null ? (varPct>=0?'+':'')+(varPct*100).toFixed(1)+'%' : '—'}</td>
+      <td class="tbl-num">${w.labor_dol !== null ? fmt$(w.labor_dol) : '—'}</td>
+      <td class="${lpctClass}">${lpct}</td>
+      <td class="tbl-note">${w.note}</td>
+    </tr>`;
+  });
+  // Totals row
+  const totSched = WOW.reduce((s,w)=>s+(w.sched||0),0);
+  const totActual = WOW.reduce((s,w)=>s+(w.actual||0),0);
+  const totLabor = WOW.filter(w=>w.labor_dol).reduce((s,w)=>s+w.labor_dol,0);
+  const totAtt = WOW.reduce((s,w)=>s+w.att,0);
+  html+=`<tr style="background:var(--navy);color:white;font-weight:700;">
+    <td>TOTAL</td><td>Wks 1–13</td>
+    <td>${fmtN(totAtt)}</td>
+    <td>${totSched.toFixed(1)}</td>
+    <td>${totActual.toFixed(1)}</td>
+    <td>${((totActual-totSched)/totSched*100).toFixed(1)}%</td>
+    <td>${fmt$(totLabor)}</td>
+    <td>27.5% avg</td>
+    <td></td>
+  </tr>`;
+  html+='</tbody>';
+  document.getElementById('wow-table').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  OPS LABOR CHARTS
+// ══════════════════════════════════════════════
+function renderOpsCharts() {
+  const depts = ['Attractions & Parking','Admissions & Retail','Custodial & Maint.','Farm Hands','Admin'];
+  const hrs   = [255, 103.5, 48, 80, 45];
+  const costs = [3665.75, 1669.50, 788.50, 1920.00, 1305.00];
+  const bgColors = [COLORS.navy, COLORS.gold, COLORS.teal, COLORS.coral, COLORS.green];
+
+  makeChart('deptHrsChart', {
+    type:'bar',
+    data:{labels:depts,datasets:[{label:'Hours Scheduled',data:hrs,backgroundColor:bgColors,borderRadius:6}]},
+    options:{
+      indexAxis:'y',responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.raw.toFixed(1)+' hrs'}}},
+      scales:{x:{ticks:{callback:v=>v+'h'}}}
+    }
+  });
+
+  makeChart('deptCostChart', {
+    type:'doughnut',
+    data:{labels:depts,datasets:[{data:costs,backgroundColor:bgColors,borderWidth:2,borderColor:'#fff'}]},
+    options:{
+      cutout:'58%',responsive:true,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}},
+               tooltip:{callbacks:{label:ctx=>' $'+ctx.raw.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  MASTER RENDER
+// ══════════════════════════════════════════════
+function render() {
+  let data = getFilteredData();
+  if (currentView === 'weekly') data = aggregateWeekly(getFilteredData());
+
+  renderKPIs(currentView==='weekly' ? aggregateWeekly(getFilteredData()) : getFilteredData());
+  renderRecent(DAILY); // always show last days
+  renderRevenueChart(data);
+  renderMixChart(getFilteredData());
+  renderAttChart(data);
+  renderCapChart(data);
+  renderDayTable(getFilteredData());
+}
+
+// ══════════════════════════════════════════════
+//  INIT — fetch live CSV, then render. Never leave the dashboard blank:
+//  on failure we show an error overlay with a retry button and the
+//  timestamp of the last attempt.
+// ══════════════════════════════════════════════
+function showError(err) {
+  const o = document.getElementById('load-overlay');
+  o.classList.add('error');
+  o.classList.remove('hide');
+  o.innerHTML = `
+    <div class="msg">Couldn't load live data</div>
+    <div class="sub">${err && err.message ? String(err.message).replace(/</g,'&lt;') : 'Unknown error'}<br>
+    Last attempt: ${new Date().toLocaleString()}</div>
+    <button onclick="bootstrap()">Retry</button>
+  `;
+  // Also reflect in the header so it's obvious something is stale.
+  const hdr = document.getElementById('last-updated');
+  if (hdr) hdr.innerHTML = '<span style="color:var(--gold)">⚠ Data fetch failed — ' + new Date().toLocaleString() + '</span>';
+}
+
+async function bootstrap() {
+  const overlay = document.getElementById('load-overlay');
+  overlay.classList.remove('error', 'hide');
+  overlay.innerHTML = '<div class="spinner"></div><div class="msg">Loading latest data…</div><div class="sub">Fetching live figures from the season sheet.</div>';
+  try {
+    DAILY = await loadData();
+    if (!DAILY.length) throw new Error('No operating-day rows found in the sheet.');
+    tabsInited.ops = true;
+    render();
+    renderMonthlyTable();
+    // Hero banner subtitle — derived from the loaded data so it stays current.
+    const first = DAILY[0], last = DAILY[DAILY.length - 1];
+    const fmt = s => new Date(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    document.getElementById('hero-sub').textContent =
+      `${fmt(first.date)} – ${fmt(last.date)} · ${DAILY.length} operating days complete`;
+    document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleString();
+    overlay.classList.add('hide');
+  } catch (err) {
+    console.error('bootstrap failed', err);
+    showError(err);
+  }
+}
+
+window.addEventListener('load', bootstrap);
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Claude Code workspace (launch config, permissions, etc.)
+.claude/
+
+# Editor scratch
+*.swp
+.vscode/
+.idea/
+
+# Local server logs
+/tmp/httpd.log
