@@ -294,7 +294,7 @@ tr:hover td{background:var(--cream);}
       <div class="hero-stat"><div class="val" id="hs-rev">—</div><div class="lbl">Season Revenue</div></div>
       <div class="hero-stat"><div class="val" id="hs-att">—</div><div class="lbl">Total Guests</div></div>
       <div class="hero-stat"><div class="val" id="hs-cap">—</div><div class="lbl">Avg Per Cap</div></div>
-      <div class="hero-stat"><div class="val">39</div><div class="lbl">Op. Days</div></div>
+      <div class="hero-stat"><div class="val" id="hs-days">—</div><div class="lbl">Op. Days</div></div>
     </div>
   </div>
 
@@ -792,21 +792,38 @@ function setView(v, btn) {
   render();
 }
 
+// Parse a "YYYY-MM-DD" string as a LOCAL date. JS's Date constructor parses
+// bare YYYY-MM-DD strings as UTC, which causes every displayed date to shift
+// one calendar day earlier in Western (UTC-) time zones. Use this everywhere
+// we turn a stored date string into a Date object.
+function localDate(s) {
+  if (!s) return new Date(NaN);
+  const [y, m, d] = String(s).split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
 function getFilteredData() {
   if (currentRange === 0) return DAILY;
+  // Anchor the cutoff at start-of-today so today's boundary day isn't partially
+  // excluded by the current time-of-day.
   const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
   cutoff.setDate(cutoff.getDate() - currentRange);
-  return DAILY.filter(d => new Date(d.date) >= cutoff);
+  return DAILY.filter(d => localDate(d.date) >= cutoff);
 }
 
 function aggregateWeekly(data) {
   const weeks = {};
   data.forEach(d => {
-    const dt = new Date(d.date);
+    const dt = localDate(d.date);
     // ISO week Monday
     const day = dt.getDay() || 7;
     const mon = new Date(dt); mon.setDate(dt.getDate() - day + 1);
-    const key = mon.toISOString().slice(0,10);
+    // Build YYYY-MM-DD from local date components (NOT toISOString, which
+    // converts to UTC and re-introduces the off-by-one).
+    const key = mon.getFullYear() + '-' +
+                String(mon.getMonth()+1).padStart(2,'0') + '-' +
+                String(mon.getDate()).padStart(2,'0');
     if (!weeks[key]) weeks[key] = {date:key,att:0,adm:0,bar:0,fb:0,ret:0,oth:0,sqr:0,rev:0,count:0};
     weeks[key].att += d.att; weeks[key].adm += d.adm; weeks[key].bar += d.bar;
     weeks[key].fb += d.fb; weeks[key].ret += d.ret; weeks[key].oth += d.oth;
@@ -814,7 +831,7 @@ function aggregateWeekly(data) {
   });
   return Object.values(weeks).sort((a,b)=>a.date.localeCompare(b.date))
     .map(w => ({...w, cap: w.att > 0 ? w.rev/w.att : 0,
-      dow: 'Week of '+new Date(w.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}));
+      dow: 'Week of '+localDate(w.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}));
 }
 
 // ══════════════════════════════════════════════
@@ -824,8 +841,8 @@ const fmt$ = v => '$'+v.toLocaleString('en-US',{minimumFractionDigits:0,maximumF
 const fmtK = v => v>=1000?'$'+(v/1000).toFixed(1)+'k':fmt$(v);
 const fmtN = v => v.toLocaleString();
 const fmtPct = v => (v*100).toFixed(1)+'%';
-function shortDate(s){const d=new Date(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
-function fullDate(s){const d=new Date(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function shortDate(s){const d=localDate(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function fullDate(s){const d=localDate(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 
 // ══════════════════════════════════════════════
 //  KPI CARDS
@@ -840,14 +857,24 @@ function renderKPIs(data) {
   const totalBar = data.reduce((s,d)=>s+d.bar,0);
   const totalFB  = data.reduce((s,d)=>s+d.fb,0);
   const totalRet = data.reduce((s,d)=>s+d.ret,0);
-  const maxDay   = data.reduce((mx,d)=>d.rev>mx.rev?d:mx, data[0]);
+  // "Best Single Day" must always reflect a real operating day — in weekly
+  // view `data` is week-aggregated, so the max would be a week, not a day.
+  // Always compute from the raw-daily filtered set.
+  const rawDays = currentView === 'weekly' ? getFilteredData() : data;
+  const maxDay  = rawDays.length
+    ? rawDays.reduce((mx,d) => d.rev > mx.rev ? d : mx, rawDays[0])
+    : {rev: 0, date: '', att: 0};
+  // Label for the Total Revenue card — show both numbers in weekly view.
+  const opDaysSub = currentView === 'weekly'
+    ? `${data.length} week${data.length===1?'':'s'} · ${rawDays.length} operating days`
+    : `${rawDays.length} operating days`;
 
   // Spring 2025 avg per cap from Monthly data ~$23.88 (Feb) / $21.28 (Mar)
   const prevCap = 22.5; // blended Spring 2025 avg
   const capDelta = ((avgCap - prevCap)/prevCap);
 
   const cards = [
-    {label:'Total Revenue',value:fmt$(totalRev),sub:data.length+' operating days',color:'navy'},
+    {label:'Total Revenue',value:fmt$(totalRev),sub:opDaysSub,color:'navy'},
     {label:'Total Attendance',value:fmtN(totalAtt),sub:'Guests through the gate',color:'teal'},
     {label:'Avg Per Capita',value:'$'+avgCap.toFixed(2),sub:'Revenue per guest',color:'gold',
       change: capDelta, changeLbl: 'vs Spring \'25 avg $'+prevCap.toFixed(2)},
@@ -864,6 +891,7 @@ function renderKPIs(data) {
   document.getElementById('hs-rev').textContent = '$'+Math.round(fullRev/1000)+'k';
   document.getElementById('hs-att').textContent = fmtN(fullAtt);
   document.getElementById('hs-cap').textContent = '$'+fullCap.toFixed(2);
+  document.getElementById('hs-days').textContent = DAILY.length;
 
   const row = document.getElementById('kpi-row');
   row.innerHTML = cards.map(c=>`
@@ -1292,7 +1320,7 @@ async function bootstrap() {
     renderMonthlyTable();
     // Hero banner subtitle — derived from the loaded data so it stays current.
     const first = DAILY[0], last = DAILY[DAILY.length - 1];
-    const fmt = s => new Date(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const fmt = s => localDate(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});
     document.getElementById('hero-sub').textContent =
       `${fmt(first.date)} – ${fmt(last.date)} · ${DAILY.length} operating days complete`;
     document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleString();
